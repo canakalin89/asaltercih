@@ -9,6 +9,7 @@ export async function fetchYokAtlas(
 
   const fetchHeaders: Record<string, string> = {
     Accept: "application/json",
+    "User-Agent": "tercih-robotu/1.0",
   };
   if (method !== "GET" && body) {
     fetchHeaders["Content-Type"] = "application/json";

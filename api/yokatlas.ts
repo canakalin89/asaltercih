@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { fetchYokAtlas } from "../src/lib/proxy";
+import { fetchYokAtlas } from "./_lib/proxy";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS preflight

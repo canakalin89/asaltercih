@@ -30,7 +30,7 @@ export default defineConfig({
           }
 
           const targetUrl = `https://yokatlas.yok.gov.tr${targetPath}`
-          const fetchHeaders: Record<string, string> = { Accept: 'application/json' }
+          const fetchHeaders: Record<string, string> = { Accept: 'application/json', 'User-Agent': 'tercih-robotu/1.0' }
           if (req.method !== 'GET') {
             fetchHeaders['Content-Type'] = 'application/json'
           }

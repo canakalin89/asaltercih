@@ -1,37 +1,5 @@
 import type { Handler } from "@netlify/functions";
 
-const YOKATLAS_BASE = "https://yokatlas.yok.gov.tr";
-
-async function fetchYokAtlas(
-  path: string,
-  method: string,
-  body?: string
-): Promise<{ status: number; headers: Record<string, string>; text: string }> {
-  const url = `${YOKATLAS_BASE}${path}`;
-
-  const fetchHeaders: Record<string, string> = {
-    Accept: "application/json",
-    "User-Agent": "tercih-robotu/1.0",
-  };
-  if (method !== "GET" && body) {
-    fetchHeaders["Content-Type"] = "application/json";
-  }
-
-  const res = await fetch(url, {
-    method,
-    headers: fetchHeaders,
-    body: method !== "GET" ? body : undefined,
-  });
-
-  const text = await res.text();
-  const headers: Record<string, string> = {};
-  res.headers.forEach((v, k) => {
-    headers[k] = v;
-  });
-
-  return { status: res.status, headers, text };
-}
-
 export const handler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -44,33 +12,47 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  const path = event.queryStringParameters?.path;
-  if (!path || !path.startsWith("/api/")) {
-    return {
-      statusCode: 400,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Geçersiz path" }),
-    };
-  }
-
   try {
-    const body = event.httpMethod !== "GET" ? event.body : undefined;
-    const yokRes = await fetchYokAtlas(path, event.httpMethod, body || undefined);
+    const path = event.queryStringParameters?.path;
 
+    if (!path || !path.startsWith("/api/")) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Geçersiz path" }),
+      };
+    }
+
+    const url = `https://yokatlas.yok.gov.tr${path}`;
+    const fetchHeaders: Record<string, string> = {
+      Accept: "application/json",
+      "User-Agent": "tercih-robotu/1.0",
+    };
+    if (event.httpMethod !== "GET") {
+      fetchHeaders["Content-Type"] = "application/json";
+    }
+
+    const fetchRes = await fetch(url, {
+      method: event.httpMethod,
+      headers: fetchHeaders,
+      body: event.httpMethod !== "GET" ? event.body : undefined,
+    });
+
+    const text = await fetchRes.text();
     return {
-      statusCode: yokRes.status,
+      statusCode: fetchRes.status,
       headers: {
-        "Content-Type": yokRes.headers["content-type"] || "application/json",
+        "Content-Type": fetchRes.headers.get("content-type") || "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: yokRes.text,
+      body: text,
     };
-  } catch (err) {
-    console.error("Proxy hatası:", err);
+  } catch (err: any) {
+    console.error("YokAtlas proxy hatası:", err);
     return {
-      statusCode: 502,
+      statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "YÖK Atlas bağlantı hatası" }),
+      body: JSON.stringify({ error: err.message || "Bilinmeyen hata" }),
     };
   }
 };

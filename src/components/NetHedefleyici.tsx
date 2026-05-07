@@ -157,7 +157,7 @@ export default function NetHedefleyici() {
         <div className="space-y-3 border-t pt-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">OBP (0-100)</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Diploma Notu (0-100)</label>
               <input
                 type="number"
                 min={0}

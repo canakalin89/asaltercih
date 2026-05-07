@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import type { NetGiris, PuanTuru } from "@/lib/types";
 import {
   defaultNetGiris,
-  hesaplaTytHam,
-  hesaplaSayHam,
-  hesaplaSozHam,
-  hesaplaEaHam,
-  hesaplaDilHam,
+  hesaplaTytPuan,
+  hesaplaSayPuan,
+  hesaplaSozPuan,
+  hesaplaEaPuan,
+  hesaplaDilPuan,
   hesaplaYerlestirmePuan,
 } from "@/lib/score";
 import { Calculator, RotateCcw } from "lucide-react";
@@ -24,17 +24,17 @@ export default function ScoreCalculator({ puanTuru, onChange }: Props) {
   const [nets, setNets] = useState<NetGiris>(defaultNetGiris);
   const [obp, setObp] = useState(0);
 
-  const tytHam = useMemo(() => hesaplaTytHam(nets), [nets]);
-  const aytHam = useMemo(() => {
+  const tytPuan = useMemo(() => hesaplaTytPuan(nets), [nets]);
+  const aytPuan = useMemo(() => {
     switch (puanTuru) {
       case "SAY":
-        return hesaplaSayHam(nets);
+        return hesaplaSayPuan(nets);
       case "SÖZ":
-        return hesaplaSozHam(nets);
+        return hesaplaSozPuan(nets);
       case "EA":
-        return hesaplaEaHam(nets);
+        return hesaplaEaPuan(nets);
       case "DİL":
-        return hesaplaDilHam(nets);
+        return hesaplaDilPuan(nets);
       case "TYT":
         return 0;
       default:
@@ -42,14 +42,14 @@ export default function ScoreCalculator({ puanTuru, onChange }: Props) {
     }
   }, [nets, puanTuru]);
 
-  const yp = useMemo(() => hesaplaYerlestirmePuan(tytHam, aytHam, obp), [tytHam, aytHam, obp]);
+  const yp = useMemo(() => hesaplaYerlestirmePuan(tytPuan, aytPuan, obp), [tytPuan, aytPuan, obp]);
 
   const update = (key: keyof NetGiris, val: number) => {
     setNets((prev) => ({ ...prev, [key]: clamp(val, 0, 999) }));
   };
 
   const handleApply = () => {
-    onChange(tytHam, aytHam, obp, yp);
+    onChange(tytPuan, aytPuan, obp, yp);
   };
 
   const handleReset = () => {
@@ -119,8 +119,8 @@ export default function ScoreCalculator({ puanTuru, onChange }: Props) {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <ScoreBox label="TYT Ham" value={tytHam.toFixed(3)} />
-        <ScoreBox label={`${puanTuru} AYT Ham`} value={aytHam.toFixed(3)} />
+        <ScoreBox label="TYT Puan" value={tytPuan.toFixed(3)} />
+        <ScoreBox label={`${puanTuru} AYT Puan`} value={aytPuan.toFixed(3)} />
         <ScoreBox label="Yerleştirme Puanı" value={yp.toFixed(3)} highlight />
       </div>
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 
 interface Props {
-  onApply: (tytHam: number, aytHam: number, obp: number, yp: number) => void;
+  onApply: (tytPuan: number, aytPuan: number, obp: number, yp: number) => void;
 }
 
 export default function DirectScoreInput({ onApply }: Props) {
@@ -14,7 +14,7 @@ export default function DirectScoreInput({ onApply }: Props) {
     const t = Number(tyt) || 0;
     const a = Number(ayt) || 0;
     const o = Number(obp) || 0;
-    const yp = t + a + o * 0.12;
+    const yp = t * 0.4 + a * 0.6 + o * 5 * 0.12;
     onApply(t, a, o, yp);
   };
 
@@ -22,7 +22,7 @@ export default function DirectScoreInput({ onApply }: Props) {
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">TYT Ham Puan</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">TYT Puan</label>
           <input
             type="number"
             value={tyt}
@@ -32,7 +32,7 @@ export default function DirectScoreInput({ onApply }: Props) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">AYT Ham Puan</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">AYT Puan</label>
           <input
             type="number"
             value={ayt}
@@ -42,7 +42,7 @@ export default function DirectScoreInput({ onApply }: Props) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">OBP (0-100)</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Diploma Notu (0-100)</label>
           <input
             type="number"
             value={obp}

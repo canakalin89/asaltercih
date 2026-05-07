@@ -1,5 +1,30 @@
 import type { Handler } from "@netlify/functions";
 
+const YOKATLAS_BASE = "https://yokatlas.yok.gov.tr";
+const MAX_RETRIES = 3;
+
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastError: Error | undefined;
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.status >= 500) {
+        const text = await res.text();
+        console.warn(`YÖK Atlas ${res.status} (deneme ${i + 1}):`, text.slice(0, 200));
+        lastError = new Error(`YÖK Atlas ${res.status}`);
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err as Error;
+      console.warn(`Fetch hatası (deneme ${i + 1}):`, lastError.message);
+      await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+    }
+  }
+  throw lastError || new Error("YÖK Atlas'a erişilemedi");
+}
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -23,7 +48,7 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const url = `https://yokatlas.yok.gov.tr${path}`;
+    const url = `${YOKATLAS_BASE}${path}`;
     const fetchHeaders: Record<string, string> = {
       Accept: "application/json",
       "User-Agent": "tercih-robotu/1.0",
@@ -32,7 +57,7 @@ export const handler: Handler = async (event) => {
       fetchHeaders["Content-Type"] = "application/json";
     }
 
-    const fetchRes = await fetch(url, {
+    const fetchRes = await fetchWithRetry(url, {
       method: event.httpMethod,
       headers: fetchHeaders,
       body: event.httpMethod !== "GET" ? event.body : undefined,
@@ -50,9 +75,9 @@ export const handler: Handler = async (event) => {
   } catch (err: any) {
     console.error("YokAtlas proxy hatası:", err);
     return {
-      statusCode: 500,
+      statusCode: 502,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: err.message || "Bilinmeyen hata" }),
+      body: JSON.stringify({ error: err.message || "YÖK Atlas bağlantı hatası" }),
     };
   }
 };

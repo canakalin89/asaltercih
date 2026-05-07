@@ -1,10 +1,42 @@
 import type { NetGiris, PuanTuru } from "./types";
 
-// 2025 YKS puan hesaplama sabitleri (yaklaşık, ÖSYM kılavuzuna göre)
-const TYT_TEMEL = 100;
-const TYT_KATSAYI = 3.3;
-const AYT_TEMEL = 100;
-const AYT_KATSAYI = 3;
+// 2025 YKS katsayilari (OSYM kılavuzuna göre tahmini degerler)
+const TYT_BASLANGIC = 144.95;
+const TYT_KATSAYI = {
+  turkce: 2.91,
+  sosyal: 2.94,
+  mat: 2.93,
+  fen: 3.15,
+};
+
+const AYT_SAY_KATSAYI = {
+  mat: 3.19,
+  fizik: 2.43,
+  kimya: 3.07,
+  biyoloji: 2.51,
+};
+
+const AYT_SOZ_KATSAYI = {
+  edebiyat: 3.06,
+  tarih1: 2.57,
+  cografya1: 3.16,
+  tarih2: 2.57,
+  cografya2: 3.16,
+  felsefe: 3.85,
+  din: 2.57,
+};
+
+const AYT_EA_KATSAYI = {
+  mat: 3.28,
+  edebiyat: 2.83,
+  tarih1: 2.38,
+  cografya1: 2.54,
+};
+
+const AYT_DIL_KATSAYI = {
+  dil: 2.61,
+};
+
 const OBP_KATSAYI = 0.12;
 
 function net(dogru: number, yanlis: number, maxSoru: number): number {
@@ -13,35 +45,44 @@ function net(dogru: number, yanlis: number, maxSoru: number): number {
   return Math.max(0, d - y / 4);
 }
 
-export function hesaplaTytHam(n: NetGiris): number {
+// ============================================================
+// TYT PUAN
+// ============================================================
+
+export function hesaplaTytPuan(n: NetGiris): number {
   const turkceNet = net(n.turkceDogru, n.turkceYanlis, 40);
   const sosyalNet = net(n.sosyalDogru, n.sosyalYanlis, 20);
   const matNet = net(n.matTytDogru, n.matTytYanlis, 40);
   const fenNet = net(n.fenDogru, n.fenYanlis, 20);
+
   return (
-    TYT_TEMEL +
-    turkceNet * TYT_KATSAYI +
-    sosyalNet * TYT_KATSAYI +
-    matNet * TYT_KATSAYI +
-    fenNet * TYT_KATSAYI
+    TYT_BASLANGIC +
+    turkceNet * TYT_KATSAYI.turkce +
+    sosyalNet * TYT_KATSAYI.sosyal +
+    matNet * TYT_KATSAYI.mat +
+    fenNet * TYT_KATSAYI.fen
   );
 }
 
-export function hesaplaSayHam(n: NetGiris): number {
+// ============================================================
+// AYT PUANLARI
+// ============================================================
+
+export function hesaplaSayPuan(n: NetGiris): number {
   const matNet = net(n.matAytDogru, n.matAytYanlis, 40);
   const fizikNet = net(n.fizikDogru, n.fizikYanlis, 14);
   const kimyaNet = net(n.kimyaDogru, n.kimyaYanlis, 13);
   const biyolojiNet = net(n.biyolojiDogru, n.biyolojiYanlis, 13);
+
   return (
-    AYT_TEMEL +
-    matNet * AYT_KATSAYI +
-    fizikNet * AYT_KATSAYI +
-    kimyaNet * AYT_KATSAYI +
-    biyolojiNet * AYT_KATSAYI
+    matNet * AYT_SAY_KATSAYI.mat +
+    fizikNet * AYT_SAY_KATSAYI.fizik +
+    kimyaNet * AYT_SAY_KATSAYI.kimya +
+    biyolojiNet * AYT_SAY_KATSAYI.biyoloji
   );
 }
 
-export function hesaplaSozHam(n: NetGiris): number {
+export function hesaplaSozPuan(n: NetGiris): number {
   const edebiyatNet = net(n.edebiyatDogru, n.edebiyatYanlis, 24);
   const tarih1Net = net(n.tarih1Dogru, n.tarih1Yanlis, 10);
   const cografya1Net = net(n.cografya1Dogru, n.cografya1Yanlis, 6);
@@ -49,44 +90,49 @@ export function hesaplaSozHam(n: NetGiris): number {
   const cografya2Net = net(n.cografya2Dogru, n.cografya2Yanlis, 6);
   const felsefeNet = net(n.felsefeDogru, n.felsefeYanlis, 12);
   const dinNet = net(n.dinDogru, n.dinYanlis, 6);
+
   return (
-    AYT_TEMEL +
-    edebiyatNet * AYT_KATSAYI +
-    tarih1Net * AYT_KATSAYI +
-    cografya1Net * AYT_KATSAYI +
-    tarih2Net * AYT_KATSAYI +
-    cografya2Net * AYT_KATSAYI +
-    felsefeNet * AYT_KATSAYI +
-    dinNet * AYT_KATSAYI
+    edebiyatNet * AYT_SOZ_KATSAYI.edebiyat +
+    tarih1Net * AYT_SOZ_KATSAYI.tarih1 +
+    cografya1Net * AYT_SOZ_KATSAYI.cografya1 +
+    tarih2Net * AYT_SOZ_KATSAYI.tarih2 +
+    cografya2Net * AYT_SOZ_KATSAYI.cografya2 +
+    felsefeNet * AYT_SOZ_KATSAYI.felsefe +
+    dinNet * AYT_SOZ_KATSAYI.din
   );
 }
 
-export function hesaplaEaHam(n: NetGiris): number {
+export function hesaplaEaPuan(n: NetGiris): number {
   const matNet = net(n.matAytDogru, n.matAytYanlis, 40);
   const edebiyatNet = net(n.edebiyatDogru, n.edebiyatYanlis, 24);
   const tarih1Net = net(n.tarih1Dogru, n.tarih1Yanlis, 10);
   const cografya1Net = net(n.cografya1Dogru, n.cografya1Yanlis, 6);
+
   return (
-    AYT_TEMEL +
-    matNet * AYT_KATSAYI +
-    edebiyatNet * AYT_KATSAYI +
-    tarih1Net * AYT_KATSAYI +
-    cografya1Net * AYT_KATSAYI
+    matNet * AYT_EA_KATSAYI.mat +
+    edebiyatNet * AYT_EA_KATSAYI.edebiyat +
+    tarih1Net * AYT_EA_KATSAYI.tarih1 +
+    cografya1Net * AYT_EA_KATSAYI.cografya1
   );
 }
 
-export function hesaplaDilHam(n: NetGiris): number {
+export function hesaplaDilPuan(n: NetGiris): number {
   const dilNet = net(n.dilDogru, n.dilYanlis, 80);
-  return AYT_TEMEL + dilNet * AYT_KATSAYI;
+  return dilNet * AYT_DIL_KATSAYI.dil;
 }
 
+// ============================================================
+// YERLEŞTIRME PUANI
+// ============================================================
+
 export function hesaplaYerlestirmePuan(
-  tytHam: number,
-  aytHam: number,
+  tytPuan: number,
+  aytPuan: number,
   obp: number
 ): number {
-  const obpDuzeltilmis = Math.min(Math.max(obp, 0), 100);
-  return tytHam + aytHam + obpDuzeltilmis * OBP_KATSAYI;
+  // obp: diploma notu (0-100). Gercek OBP = obp * 5
+  const obpDegeri = Math.min(Math.max(obp, 0), 100) * 5;
+  return tytPuan * 0.4 + aytPuan * 0.6 + obpDegeri * OBP_KATSAYI;
 }
 
 export function defaultNetGiris(): NetGiris {
@@ -111,7 +157,7 @@ export function defaultNetGiris(): NetGiris {
 }
 
 // ============================================================
-// TERSİNE HESAPLAMA (Hedef Puana Göre Gereken Netler)
+// TERSINE HESAPLAMA (Hedef Puana Göre Gereken Netler)
 // ============================================================
 
 export interface GerekenNetler {
@@ -159,44 +205,50 @@ export function hesaplaGerekenNetler(
   tytNet: number,
   puanTuru: PuanTuru
 ): GerekenNetler {
-  const tytHam = TYT_TEMEL + tytNet * TYT_KATSAYI;
-  const obpEki = Math.min(Math.max(obp, 0), 100) * OBP_KATSAYI;
-  const gerekenAytHam = hedefYP - tytHam - obpEki;
+  const ortTytKatsayi = (TYT_KATSAYI.turkce + TYT_KATSAYI.sosyal + TYT_KATSAYI.mat + TYT_KATSAYI.fen) / 4;
+  const tytPuanBasit = TYT_BASLANGIC + tytNet * ortTytKatsayi;
 
-  if (gerekenAytHam < AYT_TEMEL) {
+  const obpDegeri = Math.min(Math.max(obp, 0), 100) * 5;
+  const gerekenAytPuan = (hedefYP - tytPuanBasit * 0.4 - obpDegeri * OBP_KATSAYI) / 0.6;
+
+  if (gerekenAytPuan <= 0) {
     return {
       tytNet,
       aytToplamNet: 0,
-      toplamYP: tytHam + obpEki,
+      toplamYP: tytPuanBasit * 0.4 + obpDegeri * OBP_KATSAYI,
       hedefYP,
       obp,
       dersler: [],
       mumkun: false,
-      mesaj: `TYT netin (${tytNet.toFixed(1)}) ve OBP'n (${obp}) bu hedef için yeterli görünüyor. AYT'ye girmesen bile TYT ile yerleşebilirsin.`,
+      mesaj: `TYT netin (${tytNet.toFixed(1)}) ve OBP'n (${obp}) bu hedef için yeterli görünüyor. AYT'ye girmesen bile yerleşebilirsin.`,
     };
   }
 
-  const aytToplamNet = (gerekenAytHam - AYT_TEMEL) / AYT_KATSAYI;
-
   let dagilim: { ad: string; oran: number }[];
+  let ortAytKatsayi: number;
+
   switch (puanTuru) {
     case "SAY":
       dagilim = SAY_DAGILIM;
+      ortAytKatsayi = (AYT_SAY_KATSAYI.mat + AYT_SAY_KATSAYI.fizik + AYT_SAY_KATSAYI.kimya + AYT_SAY_KATSAYI.biyoloji) / 4;
       break;
     case "SÖZ":
       dagilim = SOZ_DAGILIM;
+      ortAytKatsayi = Object.values(AYT_SOZ_KATSAYI).reduce((a, b) => a + b, 0) / Object.values(AYT_SOZ_KATSAYI).length;
       break;
     case "EA":
       dagilim = EA_DAGILIM;
+      ortAytKatsayi = (AYT_EA_KATSAYI.mat + AYT_EA_KATSAYI.edebiyat + AYT_EA_KATSAYI.tarih1 + AYT_EA_KATSAYI.cografya1) / 4;
       break;
     case "DİL":
       dagilim = DIL_DAGILIM;
+      ortAytKatsayi = AYT_DIL_KATSAYI.dil;
       break;
     case "TYT":
       return {
         tytNet,
         aytToplamNet: 0,
-        toplamYP: tytHam + obpEki,
+        toplamYP: tytPuanBasit * 0.4 + obpDegeri * OBP_KATSAYI,
         hedefYP,
         obp,
         dersler: [],
@@ -205,14 +257,16 @@ export function hesaplaGerekenNetler(
       };
     default:
       dagilim = [];
+      ortAytKatsayi = 3;
   }
+
+  const aytToplamNet = gerekenAytPuan / ortAytKatsayi;
 
   const dersler = dagilim.map((d) => ({
     ad: d.ad,
     net: aytToplamNet * d.oran,
   }));
 
-  // Yuvarlama hatası düzeltme: son ders farkı ekle
   const toplamHesaplanan = dersler.reduce((s, d) => s + d.net, 0);
   if (dersler.length > 0 && Math.abs(toplamHesaplanan - aytToplamNet) > 0.001) {
     dersler[dersler.length - 1].net += aytToplamNet - toplamHesaplanan;
@@ -221,7 +275,7 @@ export function hesaplaGerekenNetler(
   return {
     tytNet,
     aytToplamNet,
-    toplamYP: tytHam + gerekenAytHam + obpEki,
+    toplamYP: tytPuanBasit * 0.4 + gerekenAytPuan * 0.6 + obpDegeri * OBP_KATSAYI,
     hedefYP,
     obp,
     dersler,

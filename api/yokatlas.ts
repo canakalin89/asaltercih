@@ -1,7 +1,31 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+const YOKATLAS_BASE = "https://yokatlas.yok.gov.tr";
+const MAX_RETRIES = 3;
+
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  let lastError: Error | undefined;
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.status >= 500) {
+        const text = await res.text();
+        console.warn(`YÖK Atlas ${res.status} (deneme ${i + 1}):`, text.slice(0, 200));
+        lastError = new Error(`YÖK Atlas ${res.status}`);
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastError = err as Error;
+      console.warn(`Fetch hatası (deneme ${i + 1}):`, lastError.message);
+      await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+    }
+  }
+  throw lastError || new Error("YÖK Atlas'a erişilemedi");
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -19,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    const url = `https://yokatlas.yok.gov.tr${path}`;
+    const url = `${YOKATLAS_BASE}${path}`;
     const fetchHeaders: Record<string, string> = {
       Accept: "application/json",
       "User-Agent": "tercih-robotu/1.0",
@@ -28,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       fetchHeaders["Content-Type"] = "application/json";
     }
 
-    const fetchRes = await fetch(url, {
+    const fetchRes = await fetchWithRetry(url, {
       method: req.method,
       headers: fetchHeaders,
       body: req.method !== "GET" ? JSON.stringify(req.body) : undefined,
@@ -40,6 +64,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(fetchRes.status).send(text);
   } catch (err: any) {
     console.error("YokAtlas proxy hatası:", err);
-    res.status(500).json({ error: err.message || "Bilinmeyen hata" });
+    res.status(502).json({ error: err.message || "YÖK Atlas bağlantı hatası" });
   }
 }

@@ -167,18 +167,7 @@ const AYT_DAGILIM: Record<PuanTuru, { ad: string; key: keyof MevcutNetler; oran:
 };
 
 function getOrtAytKatsayi(puanTuru: PuanTuru): number {
-  switch (puanTuru) {
-    case "SAY":
-      return (AYT_SAY_KATSAYI.mat + AYT_SAY_KATSAYI.fizik + AYT_SAY_KATSAYI.kimya + AYT_SAY_KATSAYI.biyoloji) / 4;
-    case "SÖZ":
-      return Object.values(AYT_SOZ_KATSAYI).reduce((a, b) => a + b, 0) / Object.values(AYT_SOZ_KATSAYI).length;
-    case "EA":
-      return (AYT_EA_KATSAYI.mat + AYT_EA_KATSAYI.edebiyat + AYT_EA_KATSAYI.tarih1 + AYT_EA_KATSAYI.cografya1) / 4;
-    case "DİL":
-      return AYT_DIL_KATSAYI.dil;
-    default:
-      return 3;
-  }
+  return getAytAgirlikliOrt(puanTuru);
 }
 
 export function karsilastirHedef(
@@ -414,28 +403,73 @@ const DIL_DAGILIM = [
   { ad: "Yabancı Dil", oran: 80 / 80 },
 ];
 
+// Doğru ağırlıklı ortalama katsayılar (soru sayısına göre)
+const TYT_MAX_PUAN = 40 * TYT_KATSAYI.turkce + 20 * TYT_KATSAYI.sosyal + 40 * TYT_KATSAYI.mat + 20 * TYT_KATSAYI.fen; // 355.40
+const SAY_MAX_PUAN = 40 * AYT_SAY_KATSAYI.mat + 14 * AYT_SAY_KATSAYI.fizik + 13 * AYT_SAY_KATSAYI.kimya + 13 * AYT_SAY_KATSAYI.biyoloji; // 234.16
+const SOZ_MAX_PUAN = 24 * AYT_SOZ_KATSAYI.edebiyat + 10 * AYT_SOZ_KATSAYI.tarih1 + 6 * AYT_SOZ_KATSAYI.cografya1 + 10 * AYT_SOZ_KATSAYI.tarih2 + 6 * AYT_SOZ_KATSAYI.cografya2 + 12 * AYT_SOZ_KATSAYI.felsefe + 6 * AYT_SOZ_KATSAYI.din; // 224.38
+const EA_MAX_PUAN = 40 * AYT_EA_KATSAYI.mat + 24 * AYT_EA_KATSAYI.edebiyat + 10 * AYT_EA_KATSAYI.tarih1 + 6 * AYT_EA_KATSAYI.cografya1; // 238.16
+const DIL_MAX_PUAN = 80 * AYT_DIL_KATSAYI.dil; // 208.80
+
+// Ağırlıklı ortalama katsayı = max puan / toplam soru
+const TYT_AGIRLIKLI_ORT = TYT_MAX_PUAN / 120; // 2.9617
+const SAY_AGIRLIKLI_ORT = SAY_MAX_PUAN / 80;   // 2.9270
+const SOZ_AGIRLIKLI_ORT = SOZ_MAX_PUAN / 74;   // 3.0322
+const EA_AGIRLIKLI_ORT = EA_MAX_PUAN / 80;     // 2.9770
+const DIL_AGIRLIKLI_ORT = DIL_MAX_PUAN / 80;   // 2.6100
+
+function getMaxAytPuan(puanTuru: PuanTuru): number {
+  switch (puanTuru) {
+    case "SAY": return SAY_MAX_PUAN;
+    case "SÖZ": return SOZ_MAX_PUAN;
+    case "EA": return EA_MAX_PUAN;
+    case "DİL": return DIL_MAX_PUAN;
+    default: return 0;
+  }
+}
+
+function getAytAgirlikliOrt(puanTuru: PuanTuru): number {
+  switch (puanTuru) {
+    case "SAY": return SAY_AGIRLIKLI_ORT;
+    case "SÖZ": return SOZ_AGIRLIKLI_ORT;
+    case "EA": return EA_AGIRLIKLI_ORT;
+    case "DİL": return DIL_AGIRLIKLI_ORT;
+    default: return 3;
+  }
+}
+
 export function hesaplaGerekenNetler(
   hedefYP: number,
   obp: number,
   tytNet: number,
   puanTuru: PuanTuru
 ): GerekenNetler {
-  const ortTytKatsayi =
-    (TYT_KATSAYI.turkce + TYT_KATSAYI.sosyal + TYT_KATSAYI.mat + TYT_KATSAYI.fen) / 4;
-  const tytPuanBasit = TYT_BASLANGIC + tytNet * ortTytKatsayi;
+  // TYT netlerini soru sayısı oranında dağıt ve GERÇEK katsayılarla puan hesapla
+  const tytTurkceNet = tytNet * (40 / 120);
+  const tytMatNet = tytNet * (40 / 120);
+  const tytSosyalNet = tytNet * (20 / 120);
+  const tytFenNet = tytNet * (20 / 120);
+
+  const tytPuan =
+    TYT_BASLANGIC +
+    tytTurkceNet * TYT_KATSAYI.turkce +
+    tytMatNet * TYT_KATSAYI.mat +
+    tytSosyalNet * TYT_KATSAYI.sosyal +
+    tytFenNet * TYT_KATSAYI.fen;
+
   const obpDegeri = Math.min(Math.max(obp, 0), 100) * 5;
 
   const tytDersler = TYT_DAGILIM.map((d) => ({
     ad: d.ad,
     net: tytNet * d.oran,
   }));
+  // Toplamı düzelt
   const tytToplamHesaplanan = tytDersler.reduce((s, d) => s + d.net, 0);
   if (tytDersler.length > 0 && Math.abs(tytToplamHesaplanan - tytNet) > 0.001) {
     tytDersler[tytDersler.length - 1].net += tytNet - tytToplamHesaplanan;
   }
 
   const gerekenAytPuan =
-    (hedefYP - tytPuanBasit * 0.4 - obpDegeri * OBP_KATSAYI) / 0.6;
+    (hedefYP - tytPuan * 0.4 - obpDegeri * OBP_KATSAYI) / 0.6;
 
   if (gerekenAytPuan <= 0) {
     return {
@@ -443,7 +477,7 @@ export function hesaplaGerekenNetler(
       tytDersler,
       aytToplamNet: 0,
       aytDersler: [],
-      toplamYP: tytPuanBasit * 0.4 + obpDegeri * OBP_KATSAYI,
+      toplamYP: tytPuan * 0.4 + obpDegeri * OBP_KATSAYI,
       hedefYP,
       obp,
       mumkun: false,
@@ -451,53 +485,49 @@ export function hesaplaGerekenNetler(
     };
   }
 
+  // TYT puan türü özel durumu
+  if (puanTuru === "TYT") {
+    return {
+      tytNet,
+      tytDersler,
+      aytToplamNet: 0,
+      aytDersler: [],
+      toplamYP: tytPuan * 0.4 + obpDegeri * OBP_KATSAYI,
+      hedefYP,
+      obp,
+      mumkun: true,
+      mesaj: "TYT puan türü için sadece TYT neti yeterli.",
+    };
+  }
+
+  // Maksimum AYT puanı kontrolü — imkansız hedefleri engelle
+  const maxAytPuan = getMaxAytPuan(puanTuru);
+  if (gerekenAytPuan > maxAytPuan) {
+    const eksikPuan = hedefYP - (tytPuan * 0.4 + maxAytPuan * 0.6 + obpDegeri * OBP_KATSAYI);
+    const gerekenEkTytPuan = eksikPuan / 0.4;
+    const gerekenEkTytNet = Math.max(0, gerekenEkTytPuan / TYT_AGIRLIKLI_ORT);
+    return {
+      tytNet,
+      tytDersler,
+      aytToplamNet: 0,
+      aytDersler: [],
+      toplamYP: tytPuan * 0.4 + maxAytPuan * 0.6 + obpDegeri * OBP_KATSAYI,
+      hedefYP,
+      obp,
+      mumkun: false,
+      mesaj: `Bu hedefe ${tytNet.toFixed(1)} TYT netiyle ulaşılamaz. AYT'den alınabilecek maksimum puan (${maxAytPuan.toFixed(1)}) bile yetmiyor. TYT netini ${gerekenEkTytNet.toFixed(1)} artırman lazım.`,
+    };
+  }
+
   let dagilim: { ad: string; oran: number }[];
-  let ortAytKatsayi: number;
+  const ortAytKatsayi = getAytAgirlikliOrt(puanTuru);
 
   switch (puanTuru) {
-    case "SAY":
-      dagilim = SAY_DAGILIM;
-      ortAytKatsayi =
-        (AYT_SAY_KATSAYI.mat +
-          AYT_SAY_KATSAYI.fizik +
-          AYT_SAY_KATSAYI.kimya +
-          AYT_SAY_KATSAYI.biyoloji) /
-        4;
-      break;
-    case "SÖZ":
-      dagilim = SOZ_DAGILIM;
-      ortAytKatsayi =
-        Object.values(AYT_SOZ_KATSAYI).reduce((a, b) => a + b, 0) /
-        Object.values(AYT_SOZ_KATSAYI).length;
-      break;
-    case "EA":
-      dagilim = EA_DAGILIM;
-      ortAytKatsayi =
-        (AYT_EA_KATSAYI.mat +
-          AYT_EA_KATSAYI.edebiyat +
-          AYT_EA_KATSAYI.tarih1 +
-          AYT_EA_KATSAYI.cografya1) /
-        4;
-      break;
-    case "DİL":
-      dagilim = DIL_DAGILIM;
-      ortAytKatsayi = AYT_DIL_KATSAYI.dil;
-      break;
-    case "TYT":
-      return {
-        tytNet,
-        tytDersler,
-        aytToplamNet: 0,
-        aytDersler: [],
-        toplamYP: tytPuanBasit * 0.4 + obpDegeri * OBP_KATSAYI,
-        hedefYP,
-        obp,
-        mumkun: true,
-        mesaj: "TYT puan türü için sadece TYT neti yeterli.",
-      };
-    default:
-      dagilim = [];
-      ortAytKatsayi = 3;
+    case "SAY": dagilim = SAY_DAGILIM; break;
+    case "SÖZ": dagilim = SOZ_DAGILIM; break;
+    case "EA": dagilim = EA_DAGILIM; break;
+    case "DİL": dagilim = DIL_DAGILIM; break;
+    default: dagilim = [];
   }
 
   const aytToplamNet = gerekenAytPuan / ortAytKatsayi;
@@ -518,7 +548,7 @@ export function hesaplaGerekenNetler(
     aytToplamNet,
     aytDersler,
     toplamYP:
-      tytPuanBasit * 0.4 + gerekenAytPuan * 0.6 + obpDegeri * OBP_KATSAYI,
+      tytPuan * 0.4 + gerekenAytPuan * 0.6 + obpDegeri * OBP_KATSAYI,
     hedefYP,
     obp,
     mumkun: true,

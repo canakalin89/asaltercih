@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { listProgramGroups, listUniversities, searchPrograms } from "@/lib/yokatlas";
 import { hesaplaGerekenNetler } from "@/lib/score";
 import type { Program, PuanTuru } from "@/lib/types";
-import { Calculator, Loader2, Target, TrendingUp } from "lucide-react";
+import { Calculator, Loader2, Target, TrendingUp, BarChart3 } from "lucide-react";
 
 export default function NetHedefleyici() {
   const [puanTuru, setPuanTuru] = useState<PuanTuru>("SAY");
@@ -217,15 +217,42 @@ export default function NetHedefleyici() {
                 </div>
               </div>
 
+              {/* Program İstatistikleri */}
+              <div className="bg-white rounded-lg border border-primary-100 p-3">
+                <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-1 mb-2">
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Program Geçmiş Yıllar İstatistiği
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  {[hedefProgram.current, ...hedefProgram.history].map((y) => (
+                    <div key={y.year} className="bg-slate-50 rounded border border-slate-100 p-1.5 text-center">
+                      <div className="text-slate-500">{y.year}</div>
+                      <div className="font-bold text-slate-800">{y.min_puan?.toFixed(2) ?? "-"}</div>
+                      <div className="text-[10px] text-slate-400">{y.basari_sirasi ? y.basari_sirasi.toLocaleString("tr-TR") : "-"} BS</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {sonuc.mesaj ? (
                 <div className="text-sm text-primary-800 bg-white rounded-lg p-3 border border-primary-100">
                   {sonuc.mesaj}
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Ders Dağılımı (yaklaşık)</div>
+                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">TYT Ders Dağılımı (yaklaşık)</div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {sonuc.dersler.map((d) => (
+                    {sonuc.tytDersler.map((d) => (
+                      <div key={d.ad} className="bg-white rounded-lg border border-slate-200 p-2">
+                        <div className="text-[10px] text-slate-500">{d.ad}</div>
+                        <div className="text-sm font-bold text-slate-800">{d.net.toFixed(1)} net</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">AYT Ders Dağılımı (yaklaşık)</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {sonuc.aytDersler.map((d) => (
                       <div key={d.ad} className="bg-white rounded-lg border border-slate-200 p-2">
                         <div className="text-[10px] text-slate-500">{d.ad}</div>
                         <div className="text-sm font-bold text-slate-800">{d.net.toFixed(1)} net</div>

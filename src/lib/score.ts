@@ -162,14 +162,22 @@ export function defaultNetGiris(): NetGiris {
 
 export interface GerekenNetler {
   tytNet: number;
+  tytDersler: { ad: string; net: number }[];
   aytToplamNet: number;
+  aytDersler: { ad: string; net: number }[];
   toplamYP: number;
   hedefYP: number;
   obp: number;
-  dersler: { ad: string; net: number }[];
   mumkun: boolean;
   mesaj?: string;
 }
+
+const TYT_DAGILIM = [
+  { ad: "TYT Türkçe", oran: 40 / 120 },
+  { ad: "TYT Sosyal", oran: 20 / 120 },
+  { ad: "TYT Matematik", oran: 40 / 120 },
+  { ad: "TYT Fen", oran: 20 / 120 },
+];
 
 const SAY_DAGILIM = [
   { ad: "AYT Matematik", oran: 40 / 80 },
@@ -211,14 +219,24 @@ export function hesaplaGerekenNetler(
   const obpDegeri = Math.min(Math.max(obp, 0), 100) * 5;
   const gerekenAytPuan = (hedefYP - tytPuanBasit * 0.4 - obpDegeri * OBP_KATSAYI) / 0.6;
 
+  const tytDersler = TYT_DAGILIM.map((d) => ({
+    ad: d.ad,
+    net: tytNet * d.oran,
+  }));
+  const tytToplamHesaplanan = tytDersler.reduce((s, d) => s + d.net, 0);
+  if (tytDersler.length > 0 && Math.abs(tytToplamHesaplanan - tytNet) > 0.001) {
+    tytDersler[tytDersler.length - 1].net += tytNet - tytToplamHesaplanan;
+  }
+
   if (gerekenAytPuan <= 0) {
     return {
       tytNet,
+      tytDersler,
       aytToplamNet: 0,
+      aytDersler: [],
       toplamYP: tytPuanBasit * 0.4 + obpDegeri * OBP_KATSAYI,
       hedefYP,
       obp,
-      dersler: [],
       mumkun: false,
       mesaj: `TYT netin (${tytNet.toFixed(1)}) ve OBP'n (${obp}) bu hedef için yeterli görünüyor. AYT'ye girmesen bile yerleşebilirsin.`,
     };
@@ -247,11 +265,12 @@ export function hesaplaGerekenNetler(
     case "TYT":
       return {
         tytNet,
+        tytDersler,
         aytToplamNet: 0,
+        aytDersler: [],
         toplamYP: tytPuanBasit * 0.4 + obpDegeri * OBP_KATSAYI,
         hedefYP,
         obp,
-        dersler: [],
         mumkun: true,
         mesaj: "TYT puan türü için sadece TYT neti yeterli.",
       };
@@ -262,23 +281,24 @@ export function hesaplaGerekenNetler(
 
   const aytToplamNet = gerekenAytPuan / ortAytKatsayi;
 
-  const dersler = dagilim.map((d) => ({
+  const aytDersler = dagilim.map((d) => ({
     ad: d.ad,
     net: aytToplamNet * d.oran,
   }));
 
-  const toplamHesaplanan = dersler.reduce((s, d) => s + d.net, 0);
-  if (dersler.length > 0 && Math.abs(toplamHesaplanan - aytToplamNet) > 0.001) {
-    dersler[dersler.length - 1].net += aytToplamNet - toplamHesaplanan;
+  const aytToplamHesaplanan = aytDersler.reduce((s, d) => s + d.net, 0);
+  if (aytDersler.length > 0 && Math.abs(aytToplamHesaplanan - aytToplamNet) > 0.001) {
+    aytDersler[aytDersler.length - 1].net += aytToplamNet - aytToplamHesaplanan;
   }
 
   return {
     tytNet,
+    tytDersler,
     aytToplamNet,
+    aytDersler,
     toplamYP: tytPuanBasit * 0.4 + gerekenAytPuan * 0.6 + obpDegeri * OBP_KATSAYI,
     hedefYP,
     obp,
-    dersler,
     mumkun: true,
   };
 }

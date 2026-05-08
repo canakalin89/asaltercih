@@ -1,8 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
 import { listProgramGroups, listUniversities, searchPrograms } from "@/lib/yokatlas";
-import { hesaplaGerekenNetler } from "@/lib/score";
+import { karsilastirHedef, type MevcutNetler } from "@/lib/score";
 import type { Program, PuanTuru } from "@/lib/types";
-import { Calculator, Loader2, Target, TrendingUp, BarChart3 } from "lucide-react";
+import { Calculator, Loader2, Target, TrendingUp, BarChart3, CheckCircle2, AlertCircle } from "lucide-react";
+
+const MAX_SORU: Record<string, number> = {
+  tytTurkce: 40, tytSosyal: 20, tytMatematik: 40, tytFen: 20,
+  aytMatematik: 40, aytFizik: 14, aytKimya: 13, aytBiyoloji: 13,
+  aytEdebiyat: 24, aytTarih1: 10, aytCografya1: 6, aytTarih2: 10,
+  aytCografya2: 6, aytFelsefe: 12, aytDin: 6, aytDil: 80,
+};
+
+const TYT_DERSLER = [
+  { key: "tytTurkce" as const, ad: "TYT Türkçe" },
+  { key: "tytMatematik" as const, ad: "TYT Matematik" },
+  { key: "tytSosyal" as const, ad: "TYT Sosyal" },
+  { key: "tytFen" as const, ad: "TYT Fen" },
+];
+
+const AYT_DERS_MAP: Record<PuanTuru, { key: keyof MevcutNetler; ad: string }[]> = {
+  SAY: [
+    { key: "aytMatematik", ad: "AYT Matematik" },
+    { key: "aytFizik", ad: "Fizik" },
+    { key: "aytKimya", ad: "Kimya" },
+    { key: "aytBiyoloji", ad: "Biyoloji" },
+  ],
+  SÖZ: [
+    { key: "aytEdebiyat", ad: "Edebiyat" },
+    { key: "aytTarih1", ad: "Tarih-1" },
+    { key: "aytCografya1", ad: "Coğrafya-1" },
+    { key: "aytTarih2", ad: "Tarih-2" },
+    { key: "aytCografya2", ad: "Coğrafya-2" },
+    { key: "aytFelsefe", ad: "Felsefe" },
+    { key: "aytDin", ad: "Din K./A.B." },
+  ],
+  EA: [
+    { key: "aytMatematik", ad: "AYT Matematik" },
+    { key: "aytEdebiyat", ad: "Edebiyat" },
+    { key: "aytTarih1", ad: "Tarih-1" },
+    { key: "aytCografya1", ad: "Coğrafya-1" },
+  ],
+  DİL: [
+    { key: "aytDil", ad: "Yabancı Dil" },
+  ],
+  TYT: [],
+};
 
 export default function NetHedefleyici() {
   const [puanTuru, setPuanTuru] = useState<PuanTuru>("SAY");
@@ -16,8 +58,14 @@ export default function NetHedefleyici() {
   const [programId, setProgramId] = useState<number | "">("");
 
   const [obp, setObp] = useState(80);
-  const [tytNet, setTytNet] = useState(80);
   const [marj, setMarj] = useState(5);
+
+  const [netler, setNetler] = useState<MevcutNetler>({
+    tytTurkce: 25, tytMatematik: 25, tytSosyal: 12, tytFen: 12,
+    aytMatematik: 20, aytFizik: 8, aytKimya: 8, aytBiyoloji: 8,
+    aytEdebiyat: 15, aytTarih1: 6, aytCografya1: 4, aytTarih2: 6,
+    aytCografya2: 4, aytFelsefe: 8, aytDin: 4, aytDil: 50,
+  });
 
   useEffect(() => {
     Promise.all([listUniversities(), listProgramGroups()]).then(
@@ -44,8 +92,15 @@ export default function NetHedefleyici() {
 
   const sonuc = useMemo(() => {
     if (!hedefPuan) return null;
-    return hesaplaGerekenNetler(hedefPuan, obp, tytNet, puanTuru);
-  }, [hedefPuan, obp, tytNet, puanTuru]);
+    return karsilastirHedef(hedefPuan, obp, netler, puanTuru);
+  }, [hedefPuan, obp, netler, puanTuru]);
+
+  const aytDersler = useMemo(() => AYT_DERS_MAP[puanTuru] ?? [], [puanTuru]);
+
+  const updateNet = (key: keyof MevcutNetler, val: number) => {
+    const max = MAX_SORU[key] ?? 120;
+    setNetler((prev) => ({ ...prev, [key]: Math.min(max, Math.max(0, Number(val) || 0)) }));
+  };
 
   const programlariCek = async () => {
     setYukleniyor(true);
@@ -72,17 +127,21 @@ export default function NetHedefleyici() {
     }
   };
 
+  const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500";
+  const labelCls = "block text-xs font-semibold text-slate-600 mb-1";
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg bg-primary-50 border border-primary-200 p-4">
         <p className="text-sm text-primary-800">
-          Bir üniversite ve bölüm seçin. Sistem, o programa girebilmek için yaklaşık kaç net yapmanız gerektiğini hesaplar.
+          Bir üniversite ve bölüm seçin. TYT ve AYT derslerindeki mevcut netlerinizi girin. Sistem, o programa girebilmek için ne kadar daha net yapmanız gerektiğini hesaplar.
         </p>
       </div>
 
+      {/* Program seçimi */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Puan Türü</label>
+          <label className={labelCls}>Puan Türü</label>
           <select
             value={puanTuru}
             onChange={(e) => {
@@ -90,7 +149,7 @@ export default function NetHedefleyici() {
               setProgramId("");
               setProgramlar([]);
             }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             <option value="SAY">Sayısal (SAY)</option>
             <option value="SÖZ">Sözel (SÖZ)</option>
@@ -99,11 +158,11 @@ export default function NetHedefleyici() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Üniversite</label>
+          <label className={labelCls}>Üniversite</label>
           <select
             value={uniId}
             onChange={(e) => { setUniId(Number(e.target.value) || ""); setProgramId(""); setProgramlar([]); }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             <option value="">Tümü</option>
             {universiteler.map((u) => (
@@ -112,11 +171,11 @@ export default function NetHedefleyici() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Program Grubu</label>
+          <label className={labelCls}>Program Grubu</label>
           <select
             value={grupId}
             onChange={(e) => { setGrupId(Number(e.target.value) || ""); setProgramId(""); setProgramlar([]); }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             <option value="">Tümü</option>
             {filtreliGruplar.map((g) => (
@@ -137,11 +196,11 @@ export default function NetHedefleyici() {
 
       {programlar.length > 0 && (
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Hedef Program</label>
+          <label className={labelCls}>Hedef Program</label>
           <select
             value={programId}
             onChange={(e) => setProgramId(Number(e.target.value) || "")}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             <option value="">Program seçin...</option>
             {programlar.map((p) => (
@@ -154,50 +213,99 @@ export default function NetHedefleyici() {
       )}
 
       {hedefProgram && (
-        <div className="space-y-3 border-t pt-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="space-y-4 border-t pt-4">
+          {/* Diploma Notu + Güvenli Marj */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Diploma Notu (0-100)</label>
+              <label className={labelCls}>Diploma Notu (0-100)</label>
               <input
                 type="number"
                 min={0}
                 max={100}
                 value={obp}
                 onChange={(e) => setObp(Math.min(100, Math.max(0, Number(e.target.value))))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={inputCls}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">TYT Net (tahmini)</label>
-              <input
-                type="number"
-                min={0}
-                max={120}
-                value={tytNet}
-                onChange={(e) => setTytNet(Math.min(120, Math.max(0, Number(e.target.value))))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Güvenli Marj (puan)</label>
+              <label className={labelCls}>Güvenli Marj (puan)</label>
               <input
                 type="number"
                 min={0}
                 max={50}
                 value={marj}
                 onChange={(e) => setMarj(Math.min(50, Math.max(0, Number(e.target.value))))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={inputCls}
               />
+              <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                <strong>Güvenli marj nedir?</strong> Programın geçen yılki taban puanına ek olarak kaç puan üstünde olmak istediğini belirtirsin.
+                Örneğin programın taban puanı 450 ise, 5 puan marj koyarsan hedefin 455 olur.
+                Bu sayede kontenjan dalgalanmalarına, puanların yıl içinde artmasına karşı güvende olursun.
+                Riskli programlarda 10-15 puan, emin programlarda 3-5 puan marj önerilir.
+              </p>
             </div>
           </div>
 
+          {/* TYT Net Girişleri */}
+          <div>
+            <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+              <Calculator className="w-3.5 h-3.5" />
+              TYT Netlerin (Mevcut)
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {TYT_DERSLER.map((d) => (
+                <div key={d.key}>
+                  <label className={labelCls}>{d.ad}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={MAX_SORU[d.key]}
+                    step={0.25}
+                    value={netler[d.key]}
+                    onChange={(e) => updateNet(d.key, Number(e.target.value))}
+                    className={inputCls}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AYT Net Girişleri */}
+          {puanTuru !== "TYT" && aytDersler.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2 flex items-center gap-1">
+                <Calculator className="w-3.5 h-3.5" />
+                {puanTuru} AYT Netlerin (Mevcut)
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {aytDersler.map((d) => (
+                  <div key={d.key}>
+                    <label className={labelCls}>{d.ad}</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={MAX_SORU[d.key] ?? 80}
+                      step={0.25}
+                      value={netler[d.key] ?? 0}
+                      onChange={(e) => updateNet(d.key, Number(e.target.value))}
+                      className={inputCls}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sonuç */}
           {sonuc && (
-            <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 space-y-3">
+            <div className="rounded-xl border border-primary-200 bg-primary-50 p-4 space-y-4">
+              {/* Başlık */}
               <div className="flex items-center gap-2 text-primary-800 font-bold">
-                <Calculator className="w-5 h-5" />
+                {sonuc.mumkun ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <AlertCircle className="w-5 h-5 text-amber-600" />}
                 Hedef: {hedefProgram.universite_adi} — {hedefProgram.birim_adi}
               </div>
 
+              {/* Özet Kartlar */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                 <div className="bg-white rounded-lg border border-primary-100 p-2 text-center">
                   <div className="text-xs text-slate-500">Program Taban</div>
@@ -208,12 +316,14 @@ export default function NetHedefleyici() {
                   <div className="font-bold text-primary-700">{sonuc.hedefYP.toFixed(3)}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-primary-100 p-2 text-center">
-                  <div className="text-xs text-slate-500">TYT Net</div>
-                  <div className="font-bold text-slate-800">{sonuc.tytNet.toFixed(1)}</div>
+                  <div className="text-xs text-slate-500">Mevcut Puanın</div>
+                  <div className={`font-bold ${sonuc.mumkun ? "text-green-700" : "text-amber-700"}`}>{sonuc.mevcutYP.toFixed(3)}</div>
                 </div>
                 <div className="bg-white rounded-lg border border-primary-100 p-2 text-center">
-                  <div className="text-xs text-slate-500">AYT Toplam Net</div>
-                  <div className="font-bold text-slate-800">{sonuc.aytToplamNet.toFixed(1)}</div>
+                  <div className="text-xs text-slate-500">Fark</div>
+                  <div className={`font-bold ${sonuc.fark >= 0 ? "text-green-700" : "text-red-600"}`}>
+                    {sonuc.fark >= 0 ? "+" : ""}{sonuc.fark.toFixed(2)} puan
+                  </div>
                 </div>
               </div>
 
@@ -234,28 +344,44 @@ export default function NetHedefleyici() {
                 </div>
               </div>
 
-              {sonuc.mesaj ? (
-                <div className="text-sm text-primary-800 bg-white rounded-lg p-3 border border-primary-100">
-                  {sonuc.mesaj}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">TYT Ders Dağılımı (yaklaşık)</div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {sonuc.tytDersler.map((d) => (
-                      <div key={d.ad} className="bg-white rounded-lg border border-slate-200 p-2">
-                        <div className="text-[10px] text-slate-500">{d.ad}</div>
-                        <div className="text-sm font-bold text-slate-800">{d.net.toFixed(1)} net</div>
-                      </div>
-                    ))}
-                  </div>
+              {/* Mesaj */}
+              <div className={`text-sm rounded-lg p-3 border ${sonuc.mumkun ? "bg-green-50 border-green-200 text-green-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+                {sonuc.mesaj}
+              </div>
 
-                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">AYT Ders Dağılımı (yaklaşık)</div>
+              {/* TYT Karşılaştırma */}
+              <div>
+                <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">TYT Netlerin</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {sonuc.tytDersler.map((d) => (
+                    <div key={d.ad} className="bg-white rounded-lg border border-slate-200 p-2">
+                      <div className="text-[10px] text-slate-500">{d.ad}</div>
+                      <div className="text-sm font-bold text-slate-800">{d.mevcut.toFixed(1)} net</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* AYT Karşılaştırma — sadece eksik varsa hedef göster */}
+              {sonuc.aytDersler.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+                    {sonuc.mumkun ? "AYT Netlerin" : `AYT Netlerin — ${sonuc.ekAytToplamNet.toFixed(1)} net daha artırman lazım`}
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {sonuc.aytDersler.map((d) => (
-                      <div key={d.ad} className="bg-white rounded-lg border border-slate-200 p-2">
+                      <div key={d.ad} className={`rounded-lg border p-2 ${d.fark > 0.01 ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>
                         <div className="text-[10px] text-slate-500">{d.ad}</div>
-                        <div className="text-sm font-bold text-slate-800">{d.net.toFixed(1)} net</div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-sm font-bold text-slate-800">{d.mevcut.toFixed(1)}</span>
+                          {d.fark > 0.01 && (
+                            <>
+                              <span className="text-xs text-slate-400">→</span>
+                              <span className="text-sm font-bold text-amber-700">{d.hedef.toFixed(1)}</span>
+                              <span className="text-[10px] text-amber-600">(+{d.fark.toFixed(1)})</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -264,7 +390,7 @@ export default function NetHedefleyici() {
 
               <div className="text-xs text-slate-500 flex items-center gap-1">
                 <TrendingUp className="w-3 h-3" />
-                Bu hesaplama yaklaşıktır. OBP ve TYT performansınıza göre değişir.
+                Bu hesaplama yaklaşıktır. AYT katsayıları ve soru sayıları ders bazında değişir.
               </div>
             </div>
           )}

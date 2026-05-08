@@ -2,6 +2,61 @@ import type { Program, SearchFiltersPayload, SearchPage } from "./types";
 
 const PROXY_BASE = "/api/yokatlas?path=";
 
+// ============================================================
+// LOCAL DATA CACHE (from Excel-derived JSON)
+// ============================================================
+
+let localCache: Program[] | null = null;
+let localLoading = false;
+
+const cityMap = new Map<number, string>();
+
+async function loadLocalPrograms(): Promise<Program[]> {
+  if (localCache) return localCache;
+  if (localLoading) {
+    // Wait for existing load
+    while (localLoading) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return localCache ?? [];
+  }
+
+  localLoading = true;
+  try {
+    const res = await fetch("/data/programs-2025.json");
+    if (!res.ok) {
+      throw new Error(`Local data fetch failed: ${res.status}`);
+    }
+    const data = (await res.json()) as Program[];
+    localCache = data;
+    // Build city map from local data
+    cityMap.clear();
+    const seen = new Set<string>();
+    let nextCode = 1;
+    for (const p of data) {
+      if (p.il_adi && !seen.has(p.il_adi)) {
+        seen.add(p.il_adi);
+        cityMap.set(nextCode++, p.il_adi);
+      }
+    }
+    return data;
+  } catch (e) {
+    console.warn("Local programs data not available, falling back to API:", e);
+    // local data failed, will fall back to API
+    return [];
+  } finally {
+    localLoading = false;
+  }
+}
+
+function ilKoduToAdi(codes: number[]): string[] {
+  return codes.map((c) => cityMap.get(c)).filter((a): a is string => !!a);
+}
+
+// ============================================================
+// API HELPERS
+// ============================================================
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${PROXY_BASE}${encodeURIComponent(path)}`, {
     method: "POST",
@@ -24,6 +79,10 @@ async function getJson<T>(path: string): Promise<T> {
   return res.json();
 }
 
+// ============================================================
+// SEARCH
+// ============================================================
+
 export interface SearchParams {
   puan_turu?: string | null;
   universite_id?: number[];
@@ -41,6 +100,53 @@ export interface SearchParams {
 }
 
 export async function searchPrograms(params: SearchParams = {}): Promise<SearchPage> {
+  const local = await loadLocalPrograms();
+  if (local.length > 0) {
+    return searchLocal(local, params);
+  }
+  return searchApi(params);
+}
+
+function searchLocal(programs: Program[], params: SearchParams): SearchPage {
+  const filtered = programs.filter((p) => {
+    if (params.puan_turu && p.puan_turu !== params.puan_turu) return false;
+    if (params.universite_id?.length && !params.universite_id.includes(p.universite_id)) return false;
+    if (params.birim_grup_id?.length && !params.birim_grup_id.includes(p.birim_grup_id)) return false;
+    if (params.birim_turu_id != null) {
+      const expected = params.birim_turu_id === 46 ? "LISANS" : "ONLISANS";
+      if (p.birim_turu_adi !== expected) return false;
+    }
+    if (params.universite_turu && p.universite_turu !== params.universite_turu) return false;
+    if (params.il_kodu?.length) {
+      const ilAdlari = ilKoduToAdi(params.il_kodu);
+      if (!ilAdlari.includes(p.il_adi ?? "")) return false;
+    }
+    if (params.min_basari_sirasi != null && (p.current.basari_sirasi == null || p.current.basari_sirasi < params.min_basari_sirasi)) return false;
+    if (params.max_basari_sirasi != null && (p.current.basari_sirasi == null || p.current.basari_sirasi > params.max_basari_sirasi)) return false;
+    return true;
+  });
+
+  const page = params.page ?? 0;
+  const size = params.size ?? 500;
+  const start = page * size;
+  const end = start + size;
+  const content = filtered.slice(start, end);
+
+  return {
+    content,
+    totalElements: filtered.length,
+    totalPages: Math.ceil(filtered.length / size),
+    size,
+    number: page,
+    first: page === 0,
+    last: end >= filtered.length,
+    numberOfElements: content.length,
+    empty: content.length === 0,
+    yil: 2024,
+  };
+}
+
+async function searchApi(params: SearchParams): Promise<SearchPage> {
   const filters: SearchFiltersPayload = {
     puanTuru: params.puan_turu ?? null,
     universiteId: params.universite_id ?? [],
@@ -95,8 +201,10 @@ function mapProgram(data: unknown): Program {
 
   return {
     kilavuz_kodu: Number(d.kilavuzKodu ?? d.kilavuz_kodu ?? 0),
+    universite_id: Number(d.universiteId ?? d.universite_id ?? 0),
     universite_adi: String(d.universiteAdi ?? d.universite_adi ?? ""),
     birim_adi: String(d.birimAdi ?? d.birim_adi ?? ""),
+    birim_grup_id: Number(d.birimGrupId ?? d.birim_grup_id ?? 0),
     birim_grup_adi: d.birimGrupAdi != null || d.birim_grup_adi != null
       ? String(d.birimGrupAdi ?? d.birim_grup_adi)
       : null,
@@ -156,7 +264,43 @@ function buildYearlyStats(
   };
 }
 
+// ============================================================
+// GET PROGRAM BY ID
+// ============================================================
+
+export async function getProgram(kilavuzKodu: number): Promise<Program | null> {
+  const local = await loadLocalPrograms();
+  if (local.length > 0) {
+    const found = local.find((p) => p.kilavuz_kodu === kilavuzKodu) ?? null;
+    if (found) return found;
+  }
+  // Fallback to API
+  try {
+    const raw = await postJson<unknown>("/api/tercih-kilavuz/program", { kilavuzKodu });
+    return mapProgram(raw);
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================
+// UNIVERSITIES
+// ============================================================
+
 export async function listUniversities(): Promise<{ universite_id: number; universite_adi: string }[]> {
+  const local = await loadLocalPrograms();
+  if (local.length > 0) {
+    const map = new Map<number, string>();
+    for (const p of local) {
+      if (!map.has(p.universite_id)) {
+        map.set(p.universite_id, p.universite_adi);
+      }
+    }
+    return Array.from(map.entries()).map(([universite_id, universite_adi]) => ({
+      universite_id,
+      universite_adi,
+    }));
+  }
   const raw = await getJson<unknown[]>("/api/tercih-kilavuz/universiteler");
   return raw.map((u: unknown) => {
     const x = u as Record<string, unknown>;
@@ -167,7 +311,15 @@ export async function listUniversities(): Promise<{ universite_id: number; unive
   });
 }
 
+// ============================================================
+// CITIES
+// ============================================================
+
 export async function listCities(): Promise<{ il_kodu: number; il_adi: string }[]> {
+  const local = await loadLocalPrograms();
+  if (local.length > 0) {
+    return Array.from(cityMap.entries()).map(([il_kodu, il_adi]) => ({ il_kodu, il_adi }));
+  }
   const raw = await getJson<unknown[]>("/api/tercih-kilavuz/universite-iller");
   return raw.map((c: unknown) => {
     const x = c as Record<string, unknown>;
@@ -178,7 +330,25 @@ export async function listCities(): Promise<{ il_kodu: number; il_adi: string }[
   });
 }
 
+// ============================================================
+// PROGRAM GROUPS
+// ============================================================
+
 export async function listProgramGroups(): Promise<{ birim_grup_id: number; birim_grup_adi: string; puan_turu: string }[]> {
+  const local = await loadLocalPrograms();
+  if (local.length > 0) {
+    const map = new Map<number, { ad: string; puan: string }>();
+    for (const p of local) {
+      if (!map.has(p.birim_grup_id)) {
+        map.set(p.birim_grup_id, { ad: p.birim_grup_adi ?? "", puan: p.puan_turu });
+      }
+    }
+    return Array.from(map.entries()).map(([birim_grup_id, v]) => ({
+      birim_grup_id,
+      birim_grup_adi: v.ad,
+      puan_turu: v.puan,
+    }));
+  }
   const raw = await getJson<unknown[]>("/api/tercih-kilavuz/universite-programlar");
   return raw.map((p: unknown) => {
     const x = p as Record<string, unknown>;

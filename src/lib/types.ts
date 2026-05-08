@@ -15,8 +15,10 @@ export interface YearlyStats {
 
 export interface Program {
   kilavuz_kodu: number;
+  universite_id: number;
   universite_adi: string;
   birim_adi: string;
+  birim_grup_id: number;
   birim_grup_adi: string | null;
   birim_turu_adi: "LISANS" | "ONLISANS";
   puan_turu: string;

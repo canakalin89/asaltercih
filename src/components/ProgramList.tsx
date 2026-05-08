@@ -6,12 +6,12 @@ import { Shield, AlertCircle, AlertTriangle, HelpCircle, ChevronDown, ChevronUp 
 interface Props {
   programs: Program[];
   userBS: number | null;
-  sadeceKontenjan: boolean;
-  minPuanFilter: number | null;
-  maxPuanFilter: number | null;
+  sadeceYerlesenVerisi: boolean;
+  minBSFilter: number | null;
+  maxBSFilter: number | null;
 }
 
-export default function ProgramList({ programs, userBS, sadeceKontenjan, minPuanFilter, maxPuanFilter }: Props) {
+export default function ProgramList({ programs, userBS, sadeceYerlesenVerisi, minBSFilter, maxBSFilter }: Props) {
   const [expanded, setExpanded] = useState<Record<MatchType, boolean>>({
     safe: true,
     normal: true,
@@ -24,9 +24,9 @@ export default function ProgramList({ programs, userBS, sadeceKontenjan, minPuan
 
     for (const p of programs) {
       const s = p.current;
-      if (sadeceKontenjan && (s.kontenjan == null || s.kontenjan <= 0)) continue;
-      if (minPuanFilter != null && (s.min_puan == null || s.min_puan < minPuanFilter)) continue;
-      if (maxPuanFilter != null && (s.min_puan == null || s.min_puan > maxPuanFilter)) continue;
+      if (sadeceYerlesenVerisi && (s.basari_sirasi == null || s.basari_sirasi <= 0)) continue;
+      if (minBSFilter != null && (s.basari_sirasi == null || s.basari_sirasi < minBSFilter)) continue;
+      if (maxBSFilter != null && (s.basari_sirasi == null || s.basari_sirasi > maxBSFilter)) continue;
 
       const mt = getMatchType(userBS, s.basari_sirasi);
       map[mt].push(p);
@@ -38,7 +38,7 @@ export default function ProgramList({ programs, userBS, sadeceKontenjan, minPuan
     }
 
     return map;
-  }, [programs, userBS, sadeceKontenjan, minPuanFilter, maxPuanFilter]);
+  }, [programs, userBS, sadeceYerlesenVerisi, minBSFilter, maxBSFilter]);
 
   const sections: { key: MatchType; title: string; icon: React.ReactNode; color: string }[] = [
     { key: "safe", title: `Güvenli (${grouped.safe.length})`, icon: <Shield className="w-4 h-4" />, color: "text-safe-600" },

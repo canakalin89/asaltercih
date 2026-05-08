@@ -39,6 +39,8 @@ export default function App() {
           il_kodu: filters.il_kodu.length ? filters.il_kodu : undefined,
           birim_grup_id: filters.birim_grup_id.length ? filters.birim_grup_id : undefined,
           ogrenim_turu_id: filters.ogrenim_turu_id,
+          min_basari_sirasi: filters.min_basari_sirasi,
+          max_basari_sirasi: filters.max_basari_sirasi,
           page,
           size,
         });
@@ -118,7 +120,7 @@ export default function App() {
 
         {tab === "hedef" && (
           <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <h2 className="text-lg font-bold text-slate-800 mb-3">Net Hedefleyici</h2>
+            <h2 className="text-lg font-bold text-slate-800 mb-3">Net Hedefleyici — Bölüm için Gereken Netler</h2>
             <NetHedefleyici />
           </div>
         )}
@@ -148,9 +150,9 @@ export default function App() {
                 <ProgramList
                   programs={programs}
                   userBS={userBS}
-                  sadeceKontenjan={filters.sadece_kontenjan_olan}
-                  minPuanFilter={filters.min_puan}
-                  maxPuanFilter={filters.max_puan}
+                  sadeceYerlesenVerisi={filters.sadece_yerlesen_verisi}
+                  minBSFilter={filters.min_basari_sirasi}
+                  maxBSFilter={filters.max_basari_sirasi}
                 />
               </>
             )}

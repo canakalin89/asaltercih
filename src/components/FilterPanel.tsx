@@ -11,9 +11,9 @@ export interface Filters {
   il_kodu: number[];
   birim_grup_id: number[];
   ogrenim_turu_id: number | null; // örgün vs
-  sadece_kontenjan_olan: boolean;
-  min_puan: number | null;
-  max_puan: number | null;
+  sadece_yerlesen_verisi: boolean;
+  min_basari_sirasi: number | null;
+  max_basari_sirasi: number | null;
 }
 
 interface Props {
@@ -31,9 +31,9 @@ export const defaultFilters: Filters = {
   il_kodu: [],
   birim_grup_id: [],
   ogrenim_turu_id: null,
-  sadece_kontenjan_olan: false,
-  min_puan: null,
-  max_puan: null,
+  sadece_yerlesen_verisi: false,
+  min_basari_sirasi: null,
+  max_basari_sirasi: null,
 };
 
 export default function FilterPanel({ filters, onChange, onSearch, loading }: Props) {
@@ -60,15 +60,25 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
     return programGroups.filter((p) => !filters.puan_turu || p.puan_turu === filters.puan_turu);
   }, [programGroups, filters.puan_turu]);
 
+  const inputCls = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500";
+  const labelCls = "block text-xs font-semibold text-slate-600 mb-1";
+
   return (
     <div className="space-y-4">
+      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+        <p className="text-sm text-amber-800 font-medium">
+          4 yıllık bölümler için önemli olan başarı sırasıdır, puan değil!
+          Programları başarı sıranıza göre filtreleyin.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Puan Türü</label>
+          <label className={labelCls}>Puan Türü</label>
           <select
             value={filters.puan_turu}
             onChange={(e) => onChange({ ...filters, puan_turu: e.target.value as PuanTuru })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             <option value="SAY">Sayısal (SAY)</option>
             <option value="SÖZ">Sözel (SÖZ)</option>
@@ -78,11 +88,11 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Üniversite Türü</label>
+          <label className={labelCls}>Üniversite Türü</label>
           <select
             value={filters.universite_turu ?? ""}
             onChange={(e) => onChange({ ...filters, universite_turu: (e.target.value as any) || null })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             <option value="">Tümü</option>
             <option value="DEVLET">Devlet</option>
@@ -90,11 +100,11 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Öğretim Türü</label>
+          <label className={labelCls}>Öğretim Türü</label>
           <select
             value={filters.birim_turu_id ?? ""}
             onChange={(e) => onChange({ ...filters, birim_turu_id: Number(e.target.value) || null })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             <option value="">Tümü</option>
             <option value={46}>Lisans</option>
@@ -105,7 +115,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Şehir</label>
+          <label className={labelCls}>Şehir</label>
           <select
             multiple
             size={4}
@@ -114,7 +124,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
               const opts = Array.from(e.target.selectedOptions).map((o) => Number(o.value));
               onChange({ ...filters, il_kodu: opts });
             }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             {cities.map((c) => (
               <option key={c.il_kodu} value={c.il_kodu}>
@@ -125,7 +135,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
           <p className="text-[10px] text-slate-400 mt-1">Ctrl/Cmd ile çoklu seçim</p>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Program Grubu</label>
+          <label className={labelCls}>Program Grubu</label>
           <select
             multiple
             size={4}
@@ -134,7 +144,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
               const opts = Array.from(e.target.selectedOptions).map((o) => Number(o.value));
               onChange({ ...filters, birim_grup_id: opts });
             }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             {filteredProgramGroups.map((p) => (
               <option key={p.birim_grup_id} value={p.birim_grup_id}>
@@ -148,7 +158,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Üniversite</label>
+          <label className={labelCls}>Üniversite</label>
           <select
             multiple
             size={4}
@@ -157,7 +167,7 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
               const opts = Array.from(e.target.selectedOptions).map((o) => Number(o.value));
               onChange({ ...filters, universite_id: opts });
             }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={inputCls}
           >
             {universities.map((u) => (
               <option key={u.universite_id} value={u.universite_id}>
@@ -167,24 +177,26 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
           </select>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Min. Taban Puan</label>
+          <label className={labelCls}>Min. Başarı Sırası</label>
           <input
             type="number"
-            placeholder="örn. 300"
-            value={filters.min_puan ?? ""}
-            onChange={(e) => onChange({ ...filters, min_puan: Number(e.target.value) || null })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="örn. 100000"
+            value={filters.min_basari_sirasi ?? ""}
+            onChange={(e) => onChange({ ...filters, min_basari_sirasi: Number(e.target.value) || null })}
+            className={inputCls}
           />
+          <p className="text-[10px] text-slate-400 mt-1">Daha iyi sıralamalar (küçük sayı)</p>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-slate-600 mb-1">Max. Taban Puan</label>
+          <label className={labelCls}>Max. Başarı Sırası</label>
           <input
             type="number"
-            placeholder="örn. 500"
-            value={filters.max_puan ?? ""}
-            onChange={(e) => onChange({ ...filters, max_puan: Number(e.target.value) || null })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="örn. 500000"
+            value={filters.max_basari_sirasi ?? ""}
+            onChange={(e) => onChange({ ...filters, max_basari_sirasi: Number(e.target.value) || null })}
+            className={inputCls}
           />
+          <p className="text-[10px] text-slate-400 mt-1">Daha kötü sıralamalar (büyük sayı)</p>
         </div>
       </div>
 
@@ -192,11 +204,11 @@ export default function FilterPanel({ filters, onChange, onSearch, loading }: Pr
         <label className="inline-flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
-            checked={filters.sadece_kontenjan_olan}
-            onChange={(e) => onChange({ ...filters, sadece_kontenjan_olan: e.target.checked })}
+            checked={filters.sadece_yerlesen_verisi}
+            onChange={(e) => onChange({ ...filters, sadece_yerlesen_verisi: e.target.checked })}
             className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
           />
-          Sadece kontenjanı olanları göster
+          Sadece yerleşme verisi olanları göster
         </label>
       </div>
 

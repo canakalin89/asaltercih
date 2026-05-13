@@ -8,6 +8,47 @@ import ProgramList from "@/components/ProgramList";
 import { searchPrograms } from "@/lib/yokatlas";
 import type { Program, PuanTuru } from "@/lib/types";
 
+const PUAN_TURU_INFO: Record<
+  PuanTuru,
+  { kisaAd: string; ornekler: string; aciklama: string; renkClass: string }
+> = {
+  SAY: {
+    kisaAd: "Sayısal",
+    ornekler: "Mühendislik · Tıp · Mimarlık",
+    aciklama:
+      "Matematik ve fen bilimleri ağırlıklı bölümler için geçerli puan türü. Mühendislik, Tıp, Eczacılık, Diş Hekimliği, Mimarlık gibi bölümler bu puanla öğrenci alır.",
+    renkClass: "bg-blue-50 border-blue-200 text-blue-800",
+  },
+  SÖZ: {
+    kisaAd: "Sözel",
+    ornekler: "Hukuk · Edebiyat · Tarih",
+    aciklama:
+      "Türkçe, edebiyat, tarih ve coğrafya ağırlıklı bölümler için geçerli puan türü. Hukuk, Türk Dili ve Edebiyatı, Tarih, İlahiyat gibi bölümler bu puanla öğrenci alır.",
+    renkClass: "bg-emerald-50 border-emerald-200 text-emerald-800",
+  },
+  EA: {
+    kisaAd: "Eşit Ağırlık",
+    ornekler: "İktisat · Psikoloji · Öğretmenlik",
+    aciklama:
+      "Sayısal ve sözel derslerin eşit ağırlıkta değerlendirildiği puan türü. İktisat, İşletme, Psikoloji, çoğu öğretmenlik bölümü ve Uluslararası İlişkiler bu puanla öğrenci alır.",
+    renkClass: "bg-violet-50 border-violet-200 text-violet-800",
+  },
+  DİL: {
+    kisaAd: "Dil",
+    ornekler: "İngilizce Öğretmenliği · Mütercim",
+    aciklama:
+      "Yabancı dil sınavı (YDT) ağırlıklı puan türü. İngilizce, Almanca, Fransızca Öğretmenliği ve Mütercim Tercümanlık gibi yabancı dil bölümleri bu puanla öğrenci alır.",
+    renkClass: "bg-amber-50 border-amber-200 text-amber-800",
+  },
+  TYT: {
+    kisaAd: "TYT (Ön Lisans)",
+    ornekler: "2 Yıllık · Meslek Y.O.",
+    aciklama:
+      "Yalnızca TYT puanıyla yerleşilen 2 yıllık ön lisans (meslek yüksekokulu) programları için geçerli puan türü. Herhangi bir AYT sınavına girmeden bu bölümlere başvurulabilir.",
+    renkClass: "bg-rose-50 border-rose-200 text-rose-800",
+  },
+};
+
 type Tab = "net" | "hedef" | "filters" | "results";
 
 export default function App() {
@@ -115,23 +156,39 @@ export default function App() {
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="text-lg font-bold text-slate-800 mb-3">Puan Türü Seç</h2>
-              <div className="flex flex-wrap gap-2">
-                {(["SAY", "SÖZ", "EA", "DİL", "TYT"] as PuanTuru[]).map((pt) => (
-                  <button
-                    key={pt}
-                    onClick={() => {
-                      setPuanTuru(pt);
-                      setFilters((f) => ({ ...f, puan_turu: pt }));
-                    }}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
-                      puanTuru === pt
-                        ? "bg-primary-600 text-white border-primary-600"
-                        : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    {pt}
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 mb-3">
+                {(["SAY", "SÖZ", "EA", "DİL", "TYT"] as PuanTuru[]).map((pt) => {
+                  const info = PUAN_TURU_INFO[pt];
+                  const selected = puanTuru === pt;
+                  return (
+                    <button
+                      key={pt}
+                      onClick={() => {
+                        setPuanTuru(pt);
+                        setFilters((f) => ({ ...f, puan_turu: pt }));
+                      }}
+                      className={`flex flex-col items-center text-center gap-0.5 px-3 py-3 rounded-xl border-2 transition ${
+                        selected
+                          ? "bg-primary-600 text-white border-primary-600 shadow-md"
+                          : "bg-white text-slate-700 border-slate-200 hover:border-primary-400 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="text-base font-bold leading-tight">{pt}</span>
+                      <span className={`text-[11px] leading-tight font-medium ${selected ? "text-primary-100" : "text-slate-500"}`}>
+                        {info.kisaAd}
+                      </span>
+                      <span className={`text-[10px] leading-tight mt-0.5 ${selected ? "text-primary-200" : "text-slate-400"}`}>
+                        {info.ornekler}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Seçili puan türü açıklama kutusu */}
+              <div className={`rounded-lg border px-4 py-3 text-sm ${PUAN_TURU_INFO[puanTuru].renkClass}`}>
+                <span className="font-semibold">{puanTuru} — {PUAN_TURU_INFO[puanTuru].kisaAd}: </span>
+                {PUAN_TURU_INFO[puanTuru].aciklama}
               </div>
             </div>
 

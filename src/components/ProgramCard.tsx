@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { Program } from "@/lib/types";
-import { Building2, MapPin, BookOpen, Users, Award, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { fetchProgramNets, type ProgramNets } from "@/lib/yokatlas";
+import { Building2, MapPin, BookOpen, Users, Award, TrendingDown, TrendingUp, Minus, ChevronDown, ChevronUp, Loader2, Brain } from "lucide-react";
 
 export type MatchType = "safe" | "normal" | "risk" | "unknown";
 
@@ -15,6 +17,23 @@ export default function ProgramCard({ program, matchType, userBS }: Props) {
     ? userBS - s.basari_sirasi
     : null;
 
+  const [netsOpen, setNetsOpen] = useState(false);
+  const [nets, setNets] = useState<ProgramNets | null>(null);
+  const [netsLoading, setNetsLoading] = useState(false);
+
+  const handleToggleNets = async () => {
+    if (!netsOpen && nets === null) {
+      setNetsLoading(true);
+      try {
+        const result = await fetchProgramNets(program.kilavuz_kodu, s.year ?? 2024);
+        setNets(result);
+      } finally {
+        setNetsLoading(false);
+      }
+    }
+    setNetsOpen((v) => !v);
+  };
+
   const matchBadge = {
     safe: { text: "Güvenli", className: "bg-safe-100 text-safe-600 border-safe-200" },
     normal: { text: "Normal", className: "bg-normal-100 text-normal-600 border-normal-200" },
@@ -25,6 +44,9 @@ export default function ProgramCard({ program, matchType, userBS }: Props) {
   const historyTrend = program.history.length >= 2
     ? (program.history[0].basari_sirasi ?? 0) - (program.history[1].basari_sirasi ?? 0)
     : null;
+
+  const hasNetData = nets && (nets.tyt_net != null || nets.ayt_net != null || nets.ydt_net != null);
+  const isPuanDil = program.puan_turu === "DİL";
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -87,6 +109,47 @@ export default function ProgramCard({ program, matchType, userBS }: Props) {
         </div>
       )}
 
+      {/* Son Giren Netleri butonu */}
+      <button
+        onClick={handleToggleNets}
+        disabled={netsLoading}
+        className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-primary-700 hover:text-primary-900 transition"
+      >
+        {netsLoading ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Brain className="w-3.5 h-3.5" />
+        )}
+        Son Giren Netleri
+        {netsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+      </button>
+
+      {netsOpen && (
+        <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 p-3">
+          {hasNetData ? (
+            <div className="flex flex-wrap gap-3">
+              {nets!.tyt_net != null && (
+                <NetPill label="TYT" value={nets!.tyt_net} color="blue" max={120} />
+              )}
+              {nets!.ayt_net != null && !isPuanDil && (
+                <NetPill label="AYT" value={nets!.ayt_net} color="purple" max={80} />
+              )}
+              {nets!.ydt_net != null && isPuanDil && (
+                <NetPill label="YDT" value={nets!.ydt_net} color="green" max={80} />
+              )}
+              {nets!.ayt_net != null && isPuanDil && (
+                <NetPill label="YDT" value={nets!.ayt_net} color="green" max={80} />
+              )}
+              <div className="text-[10px] text-slate-400 self-end pb-0.5">
+                {nets!.yil ?? s.year} yılı · son yerleşen kişi
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">Bu program için net verisi henüz mevcut değil.</p>
+          )}
+        </div>
+      )}
+
       <div className="mt-2 text-[11px] text-slate-400 flex flex-wrap gap-x-3 gap-y-0.5">
         <span>Kılavuz: {program.kilavuz_kodu}</span>
         <span>{program.birim_turu_adi}</span>
@@ -107,6 +170,25 @@ function StatBox({ icon, label, value }: { icon: React.ReactNode; label: string;
         {label}
       </div>
       <div className="text-sm font-bold text-slate-800 mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function NetPill({ label, value, color, max }: { label: string; value: number; color: "blue" | "purple" | "green"; max: number }) {
+  const pct = Math.min(100, (value / max) * 100);
+  const colors = {
+    blue: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-900", bar: "bg-blue-400", label: "text-blue-700" },
+    purple: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-900", bar: "bg-purple-400", label: "text-purple-700" },
+    green: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-900", bar: "bg-emerald-400", label: "text-emerald-700" },
+  }[color];
+  return (
+    <div className={`rounded-lg border ${colors.bg} ${colors.border} px-3 py-2 min-w-[80px]`}>
+      <div className={`text-[10px] font-semibold ${colors.label} uppercase tracking-wide`}>{label}</div>
+      <div className={`text-lg font-bold ${colors.text}`}>{value.toFixed(1)}</div>
+      <div className="mt-1 h-1 rounded-full bg-slate-200 overflow-hidden">
+        <div className={`h-full rounded-full ${colors.bar}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className={`text-[9px] ${colors.label} mt-0.5`}>/ {max} net</div>
     </div>
   );
 }

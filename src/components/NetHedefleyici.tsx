@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { listProgramGroups, listUniversities, searchPrograms } from "@/lib/yokatlas";
+import { listProgramGroups, listUniversities, searchPrograms, fetchProgramNets, type ProgramNets } from "@/lib/yokatlas";
 import { hesaplaGerekenNetler } from "@/lib/score";
 import type { Program, PuanTuru } from "@/lib/types";
-import { Calculator, Loader2, Target, TrendingUp, BarChart3, Crosshair, BookOpen, Atom } from "lucide-react";
+import { Calculator, Loader2, Target, TrendingUp, BarChart3, Crosshair, BookOpen, Atom, Brain } from "lucide-react";
 
 export default function NetHedefleyici() {
   const [puanTuru, setPuanTuru] = useState<PuanTuru>("SAY");
@@ -18,6 +18,9 @@ export default function NetHedefleyici() {
   const [obp, setObp] = useState(80);
   const [marj, setMarj] = useState(5);
   const [tytNet, setTytNet] = useState(60);
+
+  const [sonGirenNets, setSonGirenNets] = useState<ProgramNets | null>(null);
+  const [netsYukleniyor, setNetsYukleniyor] = useState(false);
 
   useEffect(() => {
     Promise.all([listUniversities(), listProgramGroups()]).then(
@@ -36,6 +39,19 @@ export default function NetHedefleyici() {
     if (!programId) return null;
     return programlar.find((p) => p.kilavuz_kodu === programId) || null;
   }, [programlar, programId]);
+
+  // Seçili program değişince son giren netleri çek
+  useEffect(() => {
+    if (!hedefProgram) {
+      setSonGirenNets(null);
+      return;
+    }
+    setSonGirenNets(null);
+    setNetsYukleniyor(true);
+    fetchProgramNets(hedefProgram.kilavuz_kodu, hedefProgram.current.year ?? 2024)
+      .then((n) => setSonGirenNets(n))
+      .finally(() => setNetsYukleniyor(false));
+  }, [hedefProgram]);
 
   const hedefPuan = useMemo(() => {
     if (!hedefProgram) return null;
@@ -260,6 +276,49 @@ export default function NetHedefleyici() {
                   {sonuc.mesaj}
                 </div>
               )}
+
+              {/* === SON GİREN KİŞİNİN NETLERİ === */}
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <div className="flex items-center gap-2 text-sm font-bold text-amber-900 mb-2">
+                  <Brain className="w-4 h-4 text-amber-600" />
+                  Son Giren Kişinin Netleri
+                  {netsYukleniyor && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />}
+                </div>
+                {netsYukleniyor ? (
+                  <p className="text-xs text-amber-700">Yükleniyor…</p>
+                ) : sonGirenNets && (sonGirenNets.tyt_net != null || sonGirenNets.ayt_net != null || sonGirenNets.ydt_net != null) ? (
+                  <div className="flex flex-wrap gap-3">
+                    {sonGirenNets.tyt_net != null && (
+                      <div className="bg-white rounded-lg border border-blue-200 px-3 py-2 text-center min-w-[72px]">
+                        <div className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide">TYT</div>
+                        <div className="text-xl font-bold text-blue-900">{sonGirenNets.tyt_net.toFixed(1)}</div>
+                        <div className="text-[9px] text-blue-500">/ 120 net</div>
+                      </div>
+                    )}
+                    {sonGirenNets.ayt_net != null && puanTuru !== "DİL" && (
+                      <div className="bg-white rounded-lg border border-purple-200 px-3 py-2 text-center min-w-[72px]">
+                        <div className="text-[10px] font-semibold text-purple-700 uppercase tracking-wide">AYT</div>
+                        <div className="text-xl font-bold text-purple-900">{sonGirenNets.ayt_net.toFixed(1)}</div>
+                        <div className="text-[9px] text-purple-500">/ 80 net</div>
+                      </div>
+                    )}
+                    {(sonGirenNets.ydt_net != null || (puanTuru === "DİL" && sonGirenNets.ayt_net != null)) && (
+                      <div className="bg-white rounded-lg border border-emerald-200 px-3 py-2 text-center min-w-[72px]">
+                        <div className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">YDT</div>
+                        <div className="text-xl font-bold text-emerald-900">
+                          {(sonGirenNets.ydt_net ?? sonGirenNets.ayt_net)!.toFixed(1)}
+                        </div>
+                        <div className="text-[9px] text-emerald-500">/ 80 net</div>
+                      </div>
+                    )}
+                    <div className="text-[10px] text-amber-700 self-end pb-1">
+                      {hedefProgram.current.year} yılı · son yerleşen kişi referansı
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-700">Bu program için YÖK Atlas'ta net verisi bulunamadı.</p>
+                )}
+              </div>
 
               {/* === GEREKEN NETLER === */}
               <div className="space-y-4">

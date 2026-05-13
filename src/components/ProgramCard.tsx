@@ -4,15 +4,19 @@ import { fetchProgramNets, type ProgramNets } from "@/lib/yokatlas";
 import { Building2, MapPin, BookOpen, Users, Award, TrendingDown, TrendingUp, Minus, ChevronDown, ChevronUp, Loader2, Brain } from "lucide-react";
 
 export type MatchType = "safe" | "normal" | "risk" | "unknown";
+const SCORE_SAFE_DIFF = 5;
+const SCORE_NORMAL_DIFF = -5;
 
 interface Props {
   program: Program;
   matchType: MatchType;
   userBS: number | null;
+  userYP: number | null;
 }
 
-export default function ProgramCard({ program, matchType, userBS }: Props) {
+export default function ProgramCard({ program, matchType, userBS, userYP }: Props) {
   const s = program.current;
+  const scoreDifference = userYP != null && s.min_puan != null ? userYP - s.min_puan : null;
   const diff = userBS != null && s.basari_sirasi != null && s.basari_sirasi > 0
     ? userBS - s.basari_sirasi
     : null;
@@ -86,7 +90,16 @@ export default function ProgramCard({ program, matchType, userBS }: Props) {
         <StatBox icon={<Users className="w-4 h-4 text-primary-500" />} label="Yerleşen" value={s.yerlesen?.toString() ?? "-"} />
       </div>
 
-      {diff != null && (
+      {scoreDifference != null ? (
+        <div className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${
+          scoreDifference >= SCORE_SAFE_DIFF ? "text-safe-600" : scoreDifference >= SCORE_NORMAL_DIFF ? "text-normal-600" : "text-risk-600"
+        }`}>
+          {scoreDifference >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          {scoreDifference >= 0
+            ? `${scoreDifference.toFixed(2)} puan üstündesin`
+            : `${Math.abs(scoreDifference).toFixed(2)} puan geridesin`}
+        </div>
+      ) : diff != null && (
         <div className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${
           diff < 0 ? "text-safe-600" : diff <= s.basari_sirasi! * 0.2 ? "text-normal-600" : "text-risk-600"
         }`}>

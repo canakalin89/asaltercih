@@ -2,17 +2,19 @@ import { useState } from "react";
 import { Search, SlidersHorizontal, GraduationCap, Crosshair, BarChart3 } from "lucide-react";
 import BasariSirasiInput from "@/components/BasariSirasiInput";
 import NetHedefleyici from "@/components/NetHedefleyici";
+import ScoreCalculator from "@/components/ScoreCalculator";
 import FilterPanel, { defaultFilters, type Filters } from "@/components/FilterPanel";
 import ProgramList from "@/components/ProgramList";
 import { searchPrograms } from "@/lib/yokatlas";
 import type { Program, PuanTuru } from "@/lib/types";
 
-type Tab = "bs" | "hedef" | "filters" | "results";
+type Tab = "net" | "hedef" | "filters" | "results";
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("bs");
+  const [tab, setTab] = useState<Tab>("net");
   const [puanTuru, setPuanTuru] = useState<PuanTuru>("SAY");
   const [userBS, setUserBS] = useState<number | null>(null);
+  const [userYP, setUserYP] = useState<number | null>(null);
   const [filters, setFilters] = useState<Filters>(defaultFilters);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,6 +22,13 @@ export default function App() {
 
   const handleBSApply = (bs: number) => {
     setUserBS(bs);
+    setUserYP(null);
+    setTab("filters");
+  };
+
+  const handleNetApply = (_tytHam: number, _aytHam: number, _obp: number, yp: number) => {
+    setUserYP(yp);
+    setUserBS(null);
     setTab("filters");
   };
 
@@ -70,10 +79,19 @@ export default function App() {
               <p className="text-xs text-slate-500">YÖK Atlas başarı sırasına göre tercih önerisi</p>
             </div>
           </div>
-          {userBS != null && (
+          {(userBS != null || userYP != null) && (
             <div className="hidden md:flex items-center gap-2 rounded-lg bg-primary-50 border border-primary-200 px-3 py-1.5">
-              <span className="text-xs font-medium text-slate-600">Başarı Sıran:</span>
-              <span className="text-sm font-bold text-primary-700">{userBS.toLocaleString("tr-TR")}</span>
+              {userYP != null ? (
+                <>
+                  <span className="text-xs font-medium text-slate-600">Tahmini YP:</span>
+                  <span className="text-sm font-bold text-primary-700">{userYP.toFixed(2)}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs font-medium text-slate-600">Başarı Sıran:</span>
+                  <span className="text-sm font-bold text-primary-700">{userBS!.toLocaleString("tr-TR")}</span>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -81,13 +99,13 @@ export default function App() {
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex gap-1 rounded-lg bg-white border border-slate-200 p-1 mb-6 overflow-x-auto">
-          <TabButton active={tab === "bs"} onClick={() => setTab("bs")} icon={<BarChart3 className="w-4 h-4" />} label="Başarı Sırası" />
+          <TabButton active={tab === "net"} onClick={() => setTab("net")} icon={<BarChart3 className="w-4 h-4" />} label="Net Girişi" />
           <TabButton active={tab === "hedef"} onClick={() => setTab("hedef")} icon={<Crosshair className="w-4 h-4" />} label="Net Hedefleyici" />
           <TabButton active={tab === "filters"} onClick={() => setTab("filters")} icon={<SlidersHorizontal className="w-4 h-4" />} label="Filtrele" />
           <TabButton active={tab === "results"} onClick={() => setTab("results")} icon={<Search className="w-4 h-4" />} label="Sonuçlar" badge={searched ? programs.length : undefined} />
         </div>
 
-        {tab === "bs" && (
+        {tab === "net" && (
           <div className="space-y-4">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="text-lg font-bold text-slate-800 mb-3">Puan Türü Seç</h2>
@@ -112,7 +130,15 @@ export default function App() {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <h2 className="text-lg font-bold text-slate-800 mb-3">Başarı Sırası Girişi</h2>
+              <h2 className="text-lg font-bold text-slate-800 mb-3">Tahmini Net Girişi</h2>
+              <p className="text-sm text-slate-600 mb-3">
+                TYT/AYT/YDT netlerini girerek tahmini puanını hesapla ve buna uygun bölümleri listele.
+              </p>
+              <ScoreCalculator puanTuru={puanTuru} onChange={handleNetApply} />
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <h2 className="text-lg font-bold text-slate-800 mb-3">Alternatif: Başarı Sırası Girişi</h2>
               <BasariSirasiInput onApply={handleBSApply} />
             </div>
           </div>
@@ -141,15 +167,16 @@ export default function App() {
                   <div className="text-sm text-slate-600">
                     <span className="font-semibold text-slate-800">{programs.length}</span> program bulundu
                   </div>
-                  {userBS != null && (
+                  {(userBS != null || userYP != null) && (
                     <div className="text-sm font-medium text-primary-700">
-                      BS: {userBS.toLocaleString("tr-TR")}
+                      {userYP != null ? `YP: ${userYP.toFixed(2)}` : `BS: ${userBS!.toLocaleString("tr-TR")}`}
                     </div>
                   )}
                 </div>
                 <ProgramList
                   programs={programs}
                   userBS={userBS}
+                  userYP={userYP}
                   sadeceYerlesenVerisi={filters.sadece_yerlesen_verisi}
                   minBSFilter={filters.min_basari_sirasi}
                   maxBSFilter={filters.max_basari_sirasi}

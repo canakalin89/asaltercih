@@ -9,10 +9,12 @@ interface Props {
   program: Program;
   matchType: MatchType;
   userBS: number | null;
+  userYP: number | null;
 }
 
-export default function ProgramCard({ program, matchType, userBS }: Props) {
+export default function ProgramCard({ program, matchType, userBS, userYP }: Props) {
   const s = program.current;
+  const puanDiff = userYP != null && s.min_puan != null ? userYP - s.min_puan : null;
   const diff = userBS != null && s.basari_sirasi != null && s.basari_sirasi > 0
     ? userBS - s.basari_sirasi
     : null;
@@ -86,7 +88,16 @@ export default function ProgramCard({ program, matchType, userBS }: Props) {
         <StatBox icon={<Users className="w-4 h-4 text-primary-500" />} label="Yerleşen" value={s.yerlesen?.toString() ?? "-"} />
       </div>
 
-      {diff != null && (
+      {puanDiff != null ? (
+        <div className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${
+          puanDiff >= 5 ? "text-safe-600" : puanDiff >= -5 ? "text-normal-600" : "text-risk-600"
+        }`}>
+          {puanDiff >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          {puanDiff >= 0
+            ? `${puanDiff.toFixed(2)} puan üstündesin`
+            : `${Math.abs(puanDiff).toFixed(2)} puan geridesin`}
+        </div>
+      ) : diff != null && (
         <div className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${
           diff < 0 ? "text-safe-600" : diff <= s.basari_sirasi! * 0.2 ? "text-normal-600" : "text-risk-600"
         }`}>

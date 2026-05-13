@@ -20,19 +20,11 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const handleBSApply = (bs: number) => {
-    setUserBS(bs);
-    setUserYP(null);
-    void handleSearch();
-  };
-
-  const handleNetApply = (_tytHam: number, _aytHam: number, _obp: number, yp: number) => {
-    setUserYP(yp);
-    setUserBS(null);
-    void handleSearch();
-  };
-
-  const handleSearch = async () => {
+  const performSearch = async (
+    searchFilters: Filters,
+    activeUserBS: number | null,
+    activeUserYP: number | null,
+  ) => {
     setLoading(true);
     setSearched(true);
     try {
@@ -41,15 +33,15 @@ export default function App() {
       const size = 500;
       while (true) {
         const res = await searchPrograms({
-          puan_turu: filters.puan_turu,
-          universite_turu: filters.universite_turu,
-          birim_turu_id: filters.birim_turu_id,
-          universite_id: filters.universite_id.length ? filters.universite_id : undefined,
-          il_kodu: filters.il_kodu.length ? filters.il_kodu : undefined,
-          birim_grup_id: filters.birim_grup_id.length ? filters.birim_grup_id : undefined,
-          ogrenim_turu_id: filters.ogrenim_turu_id,
-          min_basari_sirasi: filters.min_basari_sirasi,
-          max_basari_sirasi: filters.max_basari_sirasi,
+          puan_turu: searchFilters.puan_turu,
+          universite_turu: searchFilters.universite_turu,
+          birim_turu_id: searchFilters.birim_turu_id,
+          universite_id: searchFilters.universite_id.length ? searchFilters.universite_id : undefined,
+          il_kodu: searchFilters.il_kodu.length ? searchFilters.il_kodu : undefined,
+          birim_grup_id: searchFilters.birim_grup_id.length ? searchFilters.birim_grup_id : undefined,
+          ogrenim_turu_id: searchFilters.ogrenim_turu_id,
+          min_basari_sirasi: searchFilters.min_basari_sirasi,
+          max_basari_sirasi: searchFilters.max_basari_sirasi,
           page,
           size,
         });
@@ -57,6 +49,8 @@ export default function App() {
         if (res.last || res.content.length === 0 || all.length >= 3000) break;
         page++;
       }
+      setUserBS(activeUserBS);
+      setUserYP(activeUserYP);
       setPrograms(all);
       setTab("results");
     } catch (e) {
@@ -64,6 +58,18 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBSApply = (bs: number) => {
+    void performSearch(filters, bs, null);
+  };
+
+  const handleNetApply = (_tytHam: number, _aytHam: number, _obp: number, yp: number) => {
+    void performSearch(filters, null, yp);
+  };
+
+  const handleSearch = () => {
+    void performSearch(filters, userBS, userYP);
   };
 
   return (

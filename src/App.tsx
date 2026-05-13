@@ -174,10 +174,10 @@ export default function App() {
                       }`}
                     >
                       <span className="text-base font-bold leading-tight">{pt}</span>
-                      <span className={`text-[11px] leading-tight font-medium ${selected ? "text-primary-100" : "text-slate-500"}`}>
+                      <span className={`text-xs leading-tight font-medium ${selected ? "text-primary-100" : "text-slate-500"}`}>
                         {info.kisaAd}
                       </span>
-                      <span className={`text-[10px] leading-tight mt-0.5 ${selected ? "text-primary-200" : "text-slate-400"}`}>
+                      <span className={`text-xs leading-tight mt-0.5 ${selected ? "text-primary-200" : "text-slate-400"}`}>
                         {info.ornekler}
                       </span>
                     </button>

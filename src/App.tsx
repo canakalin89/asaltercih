@@ -23,13 +23,13 @@ export default function App() {
   const handleBSApply = (bs: number) => {
     setUserBS(bs);
     setUserYP(null);
-    setTab("filters");
+    void handleSearch();
   };
 
   const handleNetApply = (_tytHam: number, _aytHam: number, _obp: number, yp: number) => {
     setUserYP(yp);
     setUserBS(null);
-    setTab("filters");
+    void handleSearch();
   };
 
   const handleSearch = async () => {

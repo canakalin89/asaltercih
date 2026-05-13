@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import type { Program } from "@/lib/types";
 import ProgramCard, { type MatchType } from "./ProgramCard";
 import { Shield, AlertCircle, AlertTriangle, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+const SCORE_RATIO_SAFE_THRESHOLD = 1.05;
+const SCORE_RATIO_NORMAL_THRESHOLD = 0.95;
+const MIN_VALID_PROGRAM_SCORE = 0.01;
 
 interface Props {
   programs: Program[];
@@ -84,10 +87,10 @@ export default function ProgramList({ programs, userBS, userYP, sadeceYerlesenVe
 }
 
 function getMatchType(userYP: number | null, programPuan: number | null, userBS: number | null, programBS: number | null): MatchType {
-  if (userYP != null && programPuan != null && programPuan > 0) {
+  if (userYP != null && programPuan != null && programPuan > MIN_VALID_PROGRAM_SCORE) {
     const oran = userYP / programPuan;
-    if (oran >= 1.05) return "safe";
-    if (oran >= 0.95) return "normal";
+    if (oran >= SCORE_RATIO_SAFE_THRESHOLD) return "safe";
+    if (oran >= SCORE_RATIO_NORMAL_THRESHOLD) return "normal";
     return "risk";
   }
 

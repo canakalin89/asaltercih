@@ -4,6 +4,10 @@ export interface YearlyStats {
   yerlesen: number | null;
   min_puan: number | null;
   basari_sirasi: number | null;
+  // Son giren kişinin netleri (TYT / AYT veya YDT)
+  son_kayit_tyt_net: number | null;
+  son_kayit_ayt_net: number | null;
+  son_kayit_ydt_net: number | null;
   prof: number | null;
   doc: number | null;
   dou: number | null;

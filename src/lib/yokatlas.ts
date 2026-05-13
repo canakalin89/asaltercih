@@ -194,7 +194,7 @@ function mapProgram(data: unknown): Program {
 
   const currentYear = Number(d.yil ?? d.year ?? 0);
   const current = buildYearlyStats(d, "", currentYear);
-  const history: { year: number; kontenjan: number | null; yerlesen: number | null; min_puan: number | null; basari_sirasi: number | null; prof: number | null; doc: number | null; dou: number | null; ogr_gor: number | null; ar_gor: number | null; kpss1: number | null; kpss2: number | null; }[] = [];
+  const history: import("./types").YearlyStats[] = [];
   for (let offset = 1; offset <= 3; offset++) {
     history.push(buildYearlyStats(d, String(offset), currentYear - offset));
   }
@@ -238,7 +238,7 @@ function buildYearlyStats(
   data: Record<string, unknown>,
   suffix: string,
   year: number
-): { year: number; kontenjan: number | null; yerlesen: number | null; min_puan: number | null; basari_sirasi: number | null; prof: number | null; doc: number | null; dou: number | null; ogr_gor: number | null; ar_gor: number | null; kpss1: number | null; kpss2: number | null; } {
+): import("./types").YearlyStats {
   const get = (camel: string, snake: string): number | null => {
     const keyCamel = suffix ? `${camel}${suffix}` : camel;
     const keySnake = suffix ? `${snake}_${suffix}` : snake;
@@ -254,6 +254,9 @@ function buildYearlyStats(
     yerlesen: get("gkY", "yerlesen"),
     min_puan: get("minPuan", "min_puan"),
     basari_sirasi: get("basariSirasi", "basari_sirasi"),
+    son_kayit_tyt_net: get("sonKayitTytNet", "son_kayit_tyt_net"),
+    son_kayit_ayt_net: get("sonKayitAytNet", "son_kayit_ayt_net"),
+    son_kayit_ydt_net: get("sonKayitYdtNet", "son_kayit_ydt_net"),
     prof: get("prof", "prof"),
     doc: get("doc", "doc"),
     dou: get("dou", "dou"),
@@ -358,4 +361,59 @@ export async function listProgramGroups(): Promise<{ birim_grup_id: number; biri
       puan_turu: String(x.puanTuru ?? x.puan_turu ?? ""),
     };
   });
+}
+
+// ============================================================
+// SON GİREN KİŞİNİN NETLERİ (TYT / AYT / YDT)
+// ============================================================
+
+export interface ProgramNets {
+  tyt_net: number | null;   // TYT toplam net
+  ayt_net: number | null;   // AYT toplam net
+  ydt_net: number | null;   // YDT (yabancı dil) toplam net
+  yil: number | null;
+}
+
+/**
+ * YÖK Atlas API'sından belirtilen program için son yerleşen kişinin
+ * TYT, AYT ve YDT netlerini getirir.
+ * Yerel JSON'da verisi varsa doğrudan döner; yoksa API'ye sorgu atar.
+ */
+export async function fetchProgramNets(kilavuzKodu: number, yil = 2024): Promise<ProgramNets> {
+  // 1. Check local cache first
+  const local = await loadLocalPrograms();
+  if (local.length > 0) {
+    const prog = local.find((p) => p.kilavuz_kodu === kilavuzKodu);
+    if (prog) {
+      const s = prog.current;
+      if (s.son_kayit_tyt_net != null || s.son_kayit_ayt_net != null || s.son_kayit_ydt_net != null) {
+        return {
+          tyt_net: s.son_kayit_tyt_net ?? null,
+          ayt_net: s.son_kayit_ayt_net ?? null,
+          ydt_net: s.son_kayit_ydt_net ?? null,
+          yil: s.year,
+        };
+      }
+    }
+  }
+
+  // 2. Fetch from YÖK Atlas API
+  try {
+    const raw = await postJson<Record<string, unknown>>(
+      "/api/tercih-kilavuz/program",
+      { kilavuzKodu, yil }
+    );
+    const tyt = raw.sonKayitTytNet ?? raw.son_kayit_tyt_net ?? null;
+    const ayt = raw.sonKayitAytNet ?? raw.son_kayit_ayt_net ?? null;
+    const ydt = raw.sonKayitYdtNet ?? raw.son_kayit_ydt_net ?? null;
+    return {
+      tyt_net: tyt != null ? Number(tyt) : null,
+      ayt_net: ayt != null ? Number(ayt) : null,
+      ydt_net: ydt != null ? Number(ydt) : null,
+      yil: yil,
+    };
+  } catch {
+    // API not available — return nulls
+    return { tyt_net: null, ayt_net: null, ydt_net: null, yil: null };
+  }
 }
